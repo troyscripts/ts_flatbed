@@ -17,6 +17,14 @@ for y=-11,2,0.02 do
     assert(math.abs(nextZ-z)<0.03, 'discontinuous cargo path')
 end
 print('PASS: finite numbers, ground/deck heights, smooth loading path')
+local shifted=assert(FB.cargoPlan({x=-1,y=-4,z=-0.4},{x=1,y=1,z=1},g,true))
+assert(shifted.y==0, 'asymmetric model must shift forward to fit')
+local hugeLow,hugeHigh={x=-2,y=-5,z=-0.5},{x=2,y=5,z=1}
+assert(FB.cargoPlan(hugeLow,hugeHigh,g,false), 'hooking alone must not reject the cargo size')
+local rejected,reason=FB.cargoPlan(hugeLow,hugeHigh,g,true)
+assert(not rejected and reason:find('10.00') and reason:find('4.00'))
+assert(FB.cargoPlan({x=-1.34,y=-2,z=-0.4},{x=1.34,y=2,z=1},g,true), 'allow small measurement margin')
+print('PASS: hook separated from size check, asymmetric fit, size diagnostics and measurement margin')
 
 local mt={}
 local function v(x,y,z) return setmetatable({x=x,y=y,z=z},mt) end
@@ -81,14 +89,15 @@ assert(ents[100].frozen)
 assert(action(1,'hook',100,101,{z=0.84}).ok)
 assert(action(2,'hook',100,101,{z=0.84}).ok==false)
 assert(action(1,'rampsOff').ok==false)
-local reply=action(1,'load')
+local reply=action(1,'load',100,nil,{y=-0.1,z=0.84})
 assert(reply.ok and reply.token and reply.state.operator==1)
 assert(action(2,'load').ok==false)
 source=2;events['ts_flatbed:finish'](100,reply.token,true)
 assert(latest().busy, 'wrong actor must not finish an operation')
 source=1;events['ts_flatbed:finish'](100,reply.token+1,true)
 assert(latest().busy, 'wrong token must not finish an operation')
-ents[101].pos=v(0,-0.6,0.84)
+assert(reply.state.load.y==-0.1, 'server must preserve the calculated position')
+ents[101].pos=v(0,-0.1,0.84)
 events['ts_flatbed:finish'](100,reply.token,true)
 assert(latest().stage=='loaded' and not latest().busy)
 assert(action(1,'rampsOff').ok and not ents[100].frozen)

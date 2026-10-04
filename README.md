@@ -1,6 +1,6 @@
 # TroyScripts — ts_flatbed
 
-**Versie 0.1.0-beta · 4 oktober 2026**
+**Versie 0.1.1-beta · 4 oktober 2026**
 
 Flatbedbediening voor de vaste laadbak van `energyrampamec`: plaatsbare oprijplaten,
 een geleide lier, vastzetten en afladen. Tijdens de lierbeweging houdt de bediener
@@ -228,6 +228,20 @@ Bronnen voor de gebruikte interfaces:
 - https://coxdocs.dev/ox_target
 
 ## Changelog
+
+### 0.1.1-beta
+
+- Maatcontrole uitgevoerd bij laden/vastzetten, niet meer bij alleen kabel aansluiten.
+- Laadpositie automatisch binnen de voor- en achterrand gekozen, inclusief modellen
+  waarvan het origin niet precies in het midden zit.
+- Een meetmarge van 0,15 meter op de ingestelde maximale voertuigafmetingen. Optioneel te
+  wijzigen met `Config.CargoSizeTolerance` (in meters).
+- Afwijzingen tonen nu de gemeten lengte/breedte en de relevante ingestelde grenzen;
+  extra modelinformatie verschijnt in F8.
+- Bestaande config en `calibration.json` blijven behouden bij dit updatepakket.
+
+Parkeer voor het aansluiten de hele auto achter de lage uiteinden van de rijplaten,
+niet eronder. Deze update wijzigt de plaatsing of collision van de rijplaten niet.
 
 ### 0.1.0-beta
 

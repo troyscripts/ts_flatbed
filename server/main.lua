@@ -154,6 +154,7 @@ lib.callback.register('ts_flatbed:action', function(src, action, id, target, dat
             return fail('Voertuig te ver weg, in beweging of nog bezet.')
         end
         if type(data) ~= 'table' or not FB.finite(data.z, -2, 5) then return fail('Ongeldige laadhoogte.') end
+        if data.y ~= nil and not FB.finite(data.y,r.geometry.rearY,r.geometry.frontY) then return fail('Ongeldige laadpositie.') end
         local x, y, z = offset(truck, car)
         local heading = math.abs((GetEntityHeading(car) - GetEntityHeading(truck) + 180) % 360 - 180)
         if math.abs(x) > 1.5 or heading > 15 then return fail('Zet het voertuig recht achter of op de laadbak.') end
@@ -165,7 +166,7 @@ lib.callback.register('ts_flatbed:action', function(src, action, id, target, dat
         end
         local c = GetEntityCoords(car)
         r.origin = { x = c.x, y = c.y, z = c.z, heading = GetEntityHeading(car) }
-        r.target, r.stage, r.load = target, 'hooked', { x = 0, y = r.geometry.loadY, z = data.z }
+        r.target, r.stage, r.load = target, 'hooked', { x = 0, y = data.y or r.geometry.loadY, z = data.z }
         r.targetEntity = car
         cargoOwners[target] = id
         if action == 'secure' then
@@ -189,6 +190,12 @@ lib.callback.register('ts_flatbed:action', function(src, action, id, target, dat
     if not r.ramps or not r.target then return fail('Plaats de rijplaten en sluit een voertuig aan.') end
     if action == 'load' and r.stage ~= 'hooked' then return fail('Sluit eerst de lier aan.') end
     if action == 'unload' and r.stage ~= 'loaded' then return fail('Geen vastgezet voertuig aanwezig.') end
+    if action == 'load' and data ~= nil then
+        if type(data)~='table' or not FB.finite(data.y,r.geometry.rearY,r.geometry.frontY) or not FB.finite(data.z,-2,5) then
+            return fail('Ongeldige berekende laadpositie.')
+        end
+        r.load={x=0,y=data.y,z=data.z}
+    end
     local car = entity(r.target)
     if car == 0 or car ~= r.targetEntity or not empty(car) then return fail('Voertuig verdwenen of nog bezet.') end
     if #(GetEntityCoords(car) - GetEntityCoords(truck)) > Config.MaxCableLength + 2 then

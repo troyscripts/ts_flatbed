@@ -166,7 +166,7 @@ RegisterNetEvent('ts_flatbed:restore', function(id, origin, model)
     secured[id] = nil
 end)
 
-local function eligible(car, truck, onBed)
+local function eligible(car, truck, onBed, requireFit)
     if car == 0 or car == truck or not DoesEntityExist(car) or not net(car) then return false, 'Ongeldig voertuig.' end
     if IsEntityAttached(car) or modelNames[GetEntityModel(car)] then return false, 'Dit voertuig is al gekoppeld of zelf een flatbed.' end
     if occupied(car) then return false, 'Laat iedereen uit het voertuig stappen.' end
@@ -174,9 +174,6 @@ local function eligible(car, truck, onBed)
     local cls = GetVehicleClass(car)
     if cls == 14 or cls == 15 or cls == 16 or cls == 21 then return false, 'Dit voertuigtype kan niet op de laadbak.' end
     local low, high = GetModelDimensions(GetEntityModel(car))
-    if high.y - low.y > Config.MaxCargoLength or high.x - low.x > Config.MaxCargoWidth then
-        return false, 'Dit voertuig is te groot voor de laadbak.'
-    end
     local r = state(truck)
     if not r or not r.geometry then return false, 'Plaats eerst de rijplaten.' end
     local g = r.geometry
@@ -195,8 +192,12 @@ local function eligible(car, truck, onBed)
     end
     local heading = math.abs((GetEntityHeading(car) - GetEntityHeading(truck) + 180) % 360 - 180)
     if heading > 12 then return false, 'De auto moet dezelfde kant op wijzen als de vrachtwagen.' end
-    if g.loadY + high.y > g.frontY or g.loadY + low.y < g.rearY then return false, 'Deze auto past niet op de ingestelde laadpositie.' end
-    return true, nil, g.deckZ - low.z + Config.Defaults.cargoLift
+    local plan, reason = FB.cargoPlan(low, high, g, requireFit or onBed)
+    if not plan then
+        print(('[ts_flatbed] Model %s | %s | min %s | max %s'):format(GetEntityModel(car),reason,low,high))
+        return false, reason
+    end
+    return true, nil, plan.z, plan.y
 end
 local function areaClear(truck, car, g)
     -- Vrije laadstrook; eigen truck, lading en bediener zijn uitgezonderd.
@@ -231,7 +232,7 @@ local function runOperation(action, truck, reply)
         local start = GetOffsetFromEntityGivenWorldCoords(truck, c.x, c.y, c.z)
         local low, high = GetModelDimensions(GetEntityModel(car))
         local half = (high.y - low.y) * 0.32
-        local endY = action == 'unload' and g.toeY - high.y - 0.75 or g.loadY
+        local endY = action == 'unload' and g.toeY - high.y - 0.75 or r.load.y
         local duration = action == 'secure' and 1400 or math.max(1800, math.abs(endY - start.y) / Config.PullSpeed * 1000)
         if duration > Config.OperationTimeout - 5000 then error('Auto te ver weg voor deze liersnelheid.') end
         if Config.Remote.enabled then
@@ -318,14 +319,15 @@ local function action(name, truck, target)
                 notify('Er staat iemand of een voertuig bij de rijplaten.', 'error'); return
             end
         elseif name == 'hook' or name == 'secure' then
-            local valid, reason, z = eligible(target, truck, name == 'secure')
+            local valid, reason, z, y = eligible(target, truck, name == 'secure', name == 'secure')
             if not valid then notify(reason, 'error'); return end
-            data = { z = z }
+            data = { z = z, y = y }
         elseif name == 'load' then
             local r = state(truck)
             if not r then return end
-            local valid, reason = eligible(networkEntity(r.target), truck, false)
+            local valid, reason, z, y = eligible(networkEntity(r.target), truck, false, true)
             if not valid then notify(reason, 'error'); return end
+            data = { z = z, y = y }
         end
         if name == 'rampsOn' or name == 'rampsOff' or name == 'hook' then
             if not FBBridge.progress({ duration = 1800, label = name == 'hook' and 'Lier aansluiten' or 'Rijplaten verplaatsen',

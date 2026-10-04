@@ -26,3 +26,22 @@ function FB.validGeometry(g)
         and g.deckZ > g.groundZ and g.deckZ - g.groundZ < 3
         and g.loadY > g.rearY and g.frontY > g.loadY
 end
+
+-- Kabel koppelen en daadwerkelijk laden zijn aparte controles.
+-- Bereken een interval voor het voertuigorigin, ook bij asymmetrische modellen.
+function FB.cargoPlan(low, high, g, requireFit)
+    local length, width = high.y-low.y, high.x-low.x
+    local tolerance = Config.CargoSizeTolerance or 0.15
+    local minimum, maximum = g.rearY-low.y, g.frontY-high.y
+    local y = minimum <= maximum and FB.clamp(g.loadY, minimum, maximum) or g.loadY
+    local z = g.deckZ-low.z+Config.Defaults.cargoLift
+    if not requireFit then return {y=y,z=z} end
+    if length > Config.MaxCargoLength+tolerance or width > Config.MaxCargoWidth+tolerance then
+        return nil, ('Gemeten auto: %.2f m lang, %.2f m breed. Ingestelde maxima: %.2f × %.2f m (+ %.2f m meetmarge). Controleer de modelmaten/config.'):format(
+            length,width,Config.MaxCargoLength,Config.MaxCargoWidth,tolerance)
+    end
+    if minimum > maximum then
+        return nil, ('Auto %.2f m lang; ingestelde laadbak %.2f m. Controleer achterrand en voorrand met /flatbedafstellen.'):format(length,g.frontY-g.rearY)
+    end
+    return {y=y,z=z}
+end
