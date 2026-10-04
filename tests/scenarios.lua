@@ -144,21 +144,27 @@ assert(lift('deploy',nil,{rearY=-4,bottom=-1}).ok)
 assert(action(1,'rampsOn',100,nil,g).ok==false)
 tick()
 ents[103]={pos=v(0,-6.65,-0.6),model=456,type=2}
-local second={front=1.4,rear=-1.4,bottom=-0.4,halfWidth=0.8}
+local second={front=3.8,rear=-3.8,bottom=-0.4,halfWidth=0.8}
+ents[103].pos=v(0,-4-Config.WheelLift.reach-second.front,-0.6)
+local tooLong={front=5.2,rear=-5.2,bottom=-0.4,halfWidth=0.8}
+assert(not lift('attach',103,tooLong).ok, 'reject wheelbase beyond configured maxLength')
 second.rearBottom=0/0
 assert(not lift('attach',103,second).ok, 'reject nonfinite rear contact')
 second.rearBottom=-0.45
 second.rearHalfWidth=2.0
 assert(not lift('attach',103,second).ok, 'reject excessive rear track')
-second.halfWidth=1.5
-second.rearHalfWidth=1.5
+second.halfWidth=1.7
+second.rearHalfWidth=1.7
+ents[2].car=103 -- eigenaar blijft als inzittende in de tweede auto
 assert(lift('attach',103,second).ok)
-assert(latest().liftData.rearBottom==-0.45 and latest().liftData.rearHalfWidth==1.5)
+assert(latest().liftData.rearBottom==-0.45 and latest().liftData.rearHalfWidth==1.7)
 assert(latest().target==101 and latest().liftTarget==103)
 tick()
 assert(lift('stow').ok==false)
 assert(action(1,'rampsOn',100,nil,g).ok==false)
 assert(lift('detach').ok)
+assert(ents[2].car==103,'occupant must not be removed when uncoupling')
+ents[2].car=nil
 assert(latest().target==101 and not latest().liftTarget)
 tick();assert(lift('stow').ok);tick()
 assert(action(1,'rampsOn',100,nil,g).ok)

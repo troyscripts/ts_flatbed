@@ -559,7 +559,7 @@ end)
 -- Kleine interne interface voor de lepelmodule, geen externe framework-bridge.
 FlatbedClient = {
     entity=networkEntity, net=net, state=state, profile=profile, control=control,
-    notify=notify, occupied=occupied, closestTruck=closestTruck, freeCar=freeCar,
+    notify=notify, occupied=occupied, closestTruck=closestTruck, freeCar=freeCar, attachCargo=attach,
     states=function() return states end,
     setState=function(id, value) states[id]=value end
 }

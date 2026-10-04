@@ -43,22 +43,23 @@ local function doAction(name, truck, car)
             local lo=GetModelDimensions(GetEntityModel(truck))
             data={rearY=api.profile(truck).rearY,bottom=lo.z}
         elseif name=='attach' then
-            if not DoesEntityExist(car) or car==truck or IsEntityAttached(car) or api.occupied(car) then error('Kies een lege, losstaande auto.') end
+            if not DoesEntityExist(car) or car==truck or IsEntityAttached(car) then error('Kies een losstaand voertuig.') end
             local cls=GetVehicleClass(car)
             if cls==8 or cls==13 or cls==14 or cls==15 or cls==16 or cls==21 then error('De lepel is bedoeld voor auto\'s, niet voor dit voertuigtype.') end
             local lo,hi
             data,lo,hi=dimensions(car)
             if hi.y-lo.y>Config.WheelLift.maxLength or hi.x-lo.x>Config.WheelLift.maxWidth then error('Deze auto is te groot voor de lepel.') end
-            if not api.control(car) then error('Geen netwerkcontrole over de tweede auto.') end
+            -- De netwerk-eigenaar (ook een inzittende bestuurder) voert carry uit.
+            -- De bediener hoeft het bezette voertuig niet over te nemen.
         elseif name=='detach' then
             local r=api.state(truck)
             car=r and api.entity(r.liftTarget) or 0
-            if car==0 or api.occupied(car) or not api.control(car) then error('Laat iedereen uitstappen; netwerkcontrole is nodig om los te maken.') end
+            if car==0 then error('De tweede auto is niet beschikbaar.') end
         end
         local reply=lib.callback.await('ts_flatbed:lift',false,name,api.net(truck),car and api.net(car),data)
         if not reply or not reply.ok then error(reply and reply.message or 'Geen antwoord van de server.') end
         api.setState(api.net(truck),reply.state)
-        if name=='detach' then
+        if name=='detach' and NetworkHasControlOfEntity(car) then
             api.freeCar(car)
             SetVehicleOnGroundProperly(car)
             SetEntityVelocity(car,0,0,0)
@@ -215,7 +216,7 @@ local function carry(truck,car,r,height)
     local along=d.front*math.cos(p)-d.bottom*math.sin(p)
     local vertical=d.front*math.sin(p)+d.bottom*math.cos(p)
     AttachEntityToEntity(car,truck,-1,anchor.x+math.sin(a)*along,anchor.y-math.cos(a)*along,
-        anchor.z-vertical,pitch,0,relative,false,false,false,false,2,true)
+        anchor.z-vertical,pitch,0,relative,false,false,true,false,2,true)
     SetVehicleHandbrake(car,false)
     motion[r.liftTarget]={heading=heading,hook=hook,pitch=pitch+GetEntityPitch(truck)}
 end
@@ -250,11 +251,21 @@ CreateThread(function()
                 heights[id]=height
                 local car=api.entity(r.liftTarget)
                 if car~=0 then
+                    sleep=0
                     wanted[r.liftTarget]={car=car,truck=truck}
                     if NetworkHasControlOfEntity(car) then
-                        sleep=0
                         carry(truck,car,r,height)
+                        -- Normale schade toestaan; bestaande motor/body-schade blijft intact.
+                        SetEntityInvincible(car,false)
+                        SetEntityCanBeDamaged(car,true)
+                        SetVehicleCanBeVisiblyDamaged(car,true)
+                        SetVehicleCanBreak(car,true)
                     end
+                    -- Ook op de client van een aanrijdende speler, na iedere attachment-update.
+                    SetEntityCollision(car,true,true)
+                    -- Alleen contact met de eigen trekker onderdrukken, telkens één frame.
+                    SetEntityNoCollisionEntity(car,truck,true)
+                    SetEntityNoCollisionEntity(truck,car,true)
                 end
                 if distance<Config.WheelLift.renderDistance then
                     sleep=0

@@ -1,5 +1,5 @@
 Config = {}
-Config.Version = '1.0.0'
+Config.Version = '1.1.0'
 Config.UpdateCheck = { Enabled = true, Repository = 'troyscripts/ts_flatbed' }
 
 -- Gebruik de echte spawnnaam. Standaard gebaseerd op het aangeleverde YFT.
@@ -33,12 +33,12 @@ Config.Remote = {
 
 Config.WheelLift = {
     enabled = true,
-    reach = 1.25, -- lepel achter de achterrand
+    reach = 1.50, -- lepel achter de achterrand
     loweredHeight = 0.18, -- hoogte boven modelonderkant, onbeladen
     raisedHeight = 0.60, -- voorwielen boven modelonderkant, beladen
     maxAngle = 55.0, -- begrenzing van de meedraaiende tweede auto
-    maxLength = 5.8,
-    maxWidth = 3.2,
+    maxLength = 10.0,
+    maxWidth = 3.5,
     renderDistance = 70.0,
     -- Twee zichtbare wielkarretjes onder de achterwielen, automatisch bij koppelen.
     dollies = { enabled = true, height = 0.22, wheelRadius = 0.10 }

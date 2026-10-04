@@ -2,8 +2,8 @@ fx_version 'cerulean'
 game 'gta5'
 author 'TroyScripts'
 description 'Vaste laadbak met oprijplaten, geleide lier en voertuigtransport'
-version '0.5.0'
-config_version '1.0.0'
+version '0.5.2'
+config_version '1.1.0'
 
 shared_scripts {
     '@ox_lib/init.lua',
@@ -12,6 +12,6 @@ shared_scripts {
     'shared/math.lua',
     'shared/bridge.lua'
 }
-client_scripts { 'client/main.lua', 'client/wheellift.lua' }
+client_scripts { 'client/main.lua', 'client/wheellift.lua', 'client/passengers.lua' }
 server_scripts { 'server/main.lua', 'server/update_check.lua' }
 dependencies { 'ts_bridge', 'ox_lib', 'ox_target', '/onesync' }

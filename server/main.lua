@@ -235,12 +235,13 @@ lib.callback.register('ts_flatbed:lift', function(src, action, id, target, data)
         if car == 0 or car == truck or GetEntityType(car) ~= 2 or cargoOwners[target] or models[GetEntityModel(car)] then
             return fail('Deze auto kan niet aan de lepel.')
         end
-        if not empty(car) or GetEntitySpeed(car) > 0.5 or GetEntityRoutingBucket(car) ~= GetEntityRoutingBucket(truck) then
-            return fail('De auto moet leeg en stilstaand in dezelfde wereld zijn.')
+        if GetEntitySpeed(car) > 0.5 or GetEntityRoutingBucket(car) ~= GetEntityRoutingBucket(truck) then
+            return fail('De auto moet stilstaand in dezelfde wereld zijn.')
         end
-        if type(data) ~= 'table' or not FB.finite(data.front, 0.4, 3.5) or not FB.finite(data.rear, -3.5, -0.4)
+        if type(data) ~= 'table' or not FB.finite(data.front, 0.4, Config.WheelLift.maxLength)
+            or not FB.finite(data.rear, -Config.WheelLift.maxLength, -0.4)
             or not FB.finite(data.bottom, -2.5, 0) or not FB.finite(data.halfWidth, 0.5, Config.WheelLift.maxWidth * 0.5)
-            or data.front - data.rear > 5.5 then return fail('Ongeldige voertuigafmetingen.') end
+            or data.front - data.rear > Config.WheelLift.maxLength then return fail('Ongeldige voertuigafmetingen.') end
         if (data.rearBottom ~= nil and not FB.finite(data.rearBottom,-2.5,0))
             or (data.rearHalfWidth ~= nil and not FB.finite(data.rearHalfWidth,0.5,Config.WheelLift.maxWidth * 0.5)) then
             return fail('Ongeldige achterwielafmetingen.')
@@ -256,7 +257,7 @@ lib.callback.register('ts_flatbed:lift', function(src, action, id, target, data)
             rearBottom=data.rearBottom or data.bottom,rearHalfWidth=data.rearHalfWidth or data.halfWidth}
         cargoOwners[target] = id
     elseif action == 'detach' then
-        if not r.liftTarget or not empty(entity(r.liftTarget)) then return fail('Laat iedereen uit de tweede auto stappen.') end
+        if not r.liftTarget then return fail('Er hangt geen auto aan de lepel.') end
         clearLift(r)
     else return fail('Onbekende lepelactie.') end
     r.liftOperator, r.liftUntil = src, GetGameTimer()+2200

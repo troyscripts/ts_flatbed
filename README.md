@@ -1,6 +1,6 @@
 # TroyScripts — ts_flatbed
 
-**Script 0.5.0 · Config 1.0.0 · 4 oktober 2026**
+**Script 0.5.2 · Config 1.1.0 · 4 oktober 2026**
 
 Flatbedbediening voor de vaste laadbak van `energyrampamec`: plaatsbare oprijplaten,
 een geleide lier, vastzetten en afladen. Tijdens de lierbeweging houdt de bediener
@@ -91,6 +91,24 @@ auto. Ook hiervoor moet hij leeg zijn en dezelfde kant op wijzen als de truck.
 zet de auto terug op zijn startplek en maakt de kabel los. Een afgebroken lossing
 zet hem terug op de laadpositie. De afstandsbediening en eigen animatie worden opgeruimd.
 
+## Meerijden in de eigen auto
+
+Aan de lepel mogen bestuurder en passagiers blijven zitten tijdens koppelen,
+vervoer en losmaken. De bergingsmedewerker blijft buiten naast de stilstaande
+truck staan voor de bediening. De client die netwerkcontrole over de tweede auto
+heeft (vaak de inzittende bestuurder) voert de koppeling uit.
+
+Op de laadbak mag de eigenaar na het laden/vastzetten weer instappen en meerijden.
+Tijdens het lieren, vastzetten en met de lier afladen moet de auto nog leeg zijn;
+laat de inzittenden daarvoor uitstappen. Bij **Voertuig losmaken op laadbak** kan
+de bestuurder blijven zitten en na vrijgeven zelf afrijden.
+
+Gas, rem, handrem en stuurinvoer vanuit een vastgekoppelde auto worden tijdelijk
+geblokkeerd. Uitstappen blijft mogelijk. Na losmaken werkt de invoer weer normaal;
+de motor of schade wordt niet hersteld en de deursloten worden niet gewijzigd.
+Het script controleert hiervoor de transportstatus, geen database-eigendom.
+Normale toegangsregels van je voertuigsloten blijven gelden.
+
 ## Tweede auto aan de lepel
 
 1. Laad eerst de eerste auto op de laadbak en berg de rijplaten op.
@@ -98,7 +116,8 @@ zet hem terug op de laadpositie. De afstandsbediening en eigen animatie worden o
 3. Kies **Lepel uitklappen**. Onder de achterkant verschijnt de wielheffer met
    gele uiteinden en twee wielsteunen.
 4. Zet een tweede personenauto recht achter de truck, in dezelfde rijrichting.
-   De voorwielen moeten bij de wielsteunen staan. Iedereen stapt uit.
+   De voorwielen moeten bij de wielsteunen staan. Inzittenden mogen blijven zitten;
+   de bergingsmedewerker bedient de lepel buiten de vrachtwagen.
 5. Kies **Tweede auto koppelen** en selecteer die auto met ox_target.
    De voorwielen worden opgetild; de auto volgt een begrensd scharnier tijdens rijden.
 6. Stop om te lossen, kies **Tweede auto losmaken** en berg de lepel op.
@@ -242,18 +261,18 @@ Bronnen voor de gebruikte interfaces:
 - https://coxdocs.dev/ox_lib
 - https://coxdocs.dev/ox_target
 
-## Update naar 0.5.0 en versiecontrole
+## Update naar 0.5.2 en versiecontrole
 
-Dit updatepakket bevat alleen gewijzigde en nieuwe bestanden, cumulatief vanaf
-0.1.0-beta. Pak de map `ts_flatbed` over de bestaande resource uit. **Deze keer
-wordt config.lua wel vervangen**, omdat de nieuwe standaardkalibratie en
+Dit updatepakket bevat alleen gewijzigde en nieuwe bestanden, ten opzichte van
+0.5.0. Pak de map `ts_flatbed` over de bestaande resource uit. **Deze keer
+wordt config.lua wel vervangen**, omdat de nieuwe lepelinstellingen en
 configversie zijn aangevraagd. Neem eigen jobs, ACE-rechten en overige instellingen
 over in de nieuwe config. Bewaar je `calibration.json`. Herstart met een lege
 truck: `restart ts_flatbed`.
 
-De lokale configcontrole verwacht `Config.Version = '1.0.0'`. Bij een oude of
+De lokale configcontrole verwacht `Config.Version = '1.1.0'`. Bij een oude of
 ontbrekende versie start de bediening niet en verschijnt een duidelijke melding.
-De scriptversie in `fxmanifest.lua` is onafhankelijk hiervan `0.5.0`.
+De scriptversie in `fxmanifest.lua` is onafhankelijk hiervan `0.5.2`.
 
 `server/update_check.lua` gebruikt de bestaande serverexport
 `exports.ts_bridge:CheckForUpdates(Config.UpdateCheck)`. **ts_bridge blijft
@@ -271,6 +290,44 @@ alleen als het configuratieformaat verandert. De bridge verwerkt time-outs,
 ongeldige antwoorden en een lokale versie die nieuwer is dan GitHub.
 
 ## Changelog
+
+### 0.5.2 / config blijft 1.1.0
+
+- Inzittenden toegestaan bij koppelen en losmaken van de lepel.
+- Bediener hoeft de netwerkcontrole niet meer van de inzittende over te nemen.
+- Lokaal rij-invoer blokkeren tijdens vervoer; uitstappen blijft beschikbaar.
+- De bestuurderclient bewaakt de attachment op de laadbak na instappen of een
+  wisseling van netwerkcontrole.
+- Nieuwe passagiersmodule toegevoegd aan fxmanifest.lua.
+- Config en bridge niet gewijzigd ten opzichte van 0.5.1. Dit cumulatieve pakket
+  bevat ook de collisionfix en configwijzigingen van 0.5.1.
+- Gesimuleerde tests voor bezet koppelen/losmaken, rij-invoer, netwerkcontrole,
+  stoelwisseling en vrijgeven geslaagd. Meerijden nog met twee spelers in-game testen.
+
+### 0.5.1 / config 1.1.0
+
+- De auto aan de lepel krijgt expliciete collision op zowel de eigenaarclient als
+  de clients van andere spelers, na de attachment-update.
+- Alleen botsingen tussen de gekoppelde auto en de eigen trekker worden per frame
+  onderdrukt. Deze uitzondering stopt bij losmaken; andere voertuigen worden niet
+  uitgesloten. De attachment wordt met collision ingeschakeld gemaakt.
+- Normale schade, zichtbare schade en afbreekbare onderdelen ingeschakeld op de
+  netwerk-eigenaar. Bestaande motor- en carrosserieschade worden niet gerepareerd
+  of overschreven. Er wordt geen kunstmatige schadeberekening toegevoegd.
+- Lepel: reach 1.50, maxLength 10.0, maxWidth 3.5. De overige aangeleverde waarden
+  en de wielkarretjes blijven behouden. MaxCargoWidth blijft 3.0.
+- Servergrenzen voor wielbasis en wielposities volgen nu maxLength; de oude vaste
+  grenzen van 3.5/5.5 meter blokkeren ruimere configuraties niet meer.
+- Scriptversie en GitHub-metadata 0.5.1; configversie 1.1.0. ts_bridge blijft 0.0.8.
+
+De gebruiker heeft de ruimere lepelinstellingen met een Mule getest. De nieuwe
+collision- en schadeaanpassing is hier met gesimuleerde natives gecontroleerd,
+maar nog niet in GTA. Test na herstart met een tweede speler die achterop de
+gekoppelde auto rijdt, zowel met een stilstaande als rijdende trekker. Controleer
+botsing en extra schade ook na losmaken. Voertuighandling en andere schade- of
+godmode-scripts kunnen de uiteindelijke GTA-schade beïnvloeden. De geleide
+attachment blijft de auto op de lepel houden; hij vliegt bij een aanrijding niet
+vrij weg.
 
 ### 0.5.0 / config 1.0.0
 
