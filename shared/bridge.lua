@@ -1,6 +1,7 @@
 -- Gebaseerd op de daadwerkelijke API 1 van TroyScripts ts_bridge 0.0.7/0.0.8.
 FBBridge = {}
 function FBBridge.ready()
+    if FBConfigValid == false then return false end
     if GetResourceState('ts_bridge') ~= 'started' then
         print('^1[ts_flatbed] Start ts_bridge voor ts_flatbed.^7'); return false
     end

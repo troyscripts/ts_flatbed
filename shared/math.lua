@@ -5,6 +5,12 @@ function FB.finite(n, low, high)
 end
 function FB.clamp(n, a, b) return math.max(a, math.min(b, n)) end
 function FB.lerp(a, b, t) return a + (b - a) * t end
+-- Exact hoogteverschil tussen twee wielcontactpunten, ook bij ongelijke banden.
+function FB.liftPitch(wheelbase, frontBottom, rearBottom, heightDifference)
+    local dz = frontBottom - rearBottom
+    local span = math.sqrt(wheelbase * wheelbase + dz * dz)
+    return math.asin(FB.clamp(heightDifference / span, -0.95, 0.95)) - math.atan(dz, wheelbase)
+end
 function FB.surface(y, g)
     local t = FB.clamp((y - g.toeY) / (g.rearY - g.toeY), 0.0, 1.0)
     return FB.lerp(g.groundZ, g.deckZ, t)

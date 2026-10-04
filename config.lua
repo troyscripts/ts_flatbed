@@ -1,4 +1,6 @@
 Config = {}
+Config.Version = '1.0.0'
+Config.UpdateCheck = { Enabled = true, Repository = 'troyscripts/ts_flatbed' }
 
 -- Gebruik de echte spawnnaam. Standaard gebaseerd op het aangeleverde YFT.
 Config.Models = { energyrampamec = true }
@@ -11,7 +13,7 @@ Config.ServerDistance = 18.0 -- afstand tot midden van de lange vrachtwagen
 Config.MaxCableLength = 20.0
 Config.PullSpeed = 0.65 -- meter per seconde
 Config.MaxCargoLength = 6.5
-Config.MaxCargoWidth = 2.6
+Config.MaxCargoWidth = 3.0
 Config.MaxSlope = 5.0 -- vrachtwagen moet redelijk vlak staan
 Config.ControlTimeout = 2500
 Config.OperationTimeout = 90000
@@ -36,8 +38,10 @@ Config.WheelLift = {
     raisedHeight = 0.60, -- voorwielen boven modelonderkant, beladen
     maxAngle = 55.0, -- begrenzing van de meedraaiende tweede auto
     maxLength = 5.8,
-    maxWidth = 2.4,
-    renderDistance = 70.0
+    maxWidth = 3.2,
+    renderDistance = 70.0,
+    -- Twee zichtbare wielkarretjes onder de achterwielen, automatisch bij koppelen.
+    dollies = { enabled = true, height = 0.22, wheelRadius = 0.10 }
 }
 
 -- Bestaand GTA-model; geen voertuigmodellen uit de upload nodig in dit script.
@@ -59,5 +63,10 @@ Config.Defaults = {
     rampPitch = 0.0, rampYaw = 0.0
 }
 -- Optionele vaste waarden per spawnnaam. Opgeslagen afstellingen gaan voor.
-Config.Profiles = {}
--- Config.Profiles.energyrampamec = { rearY = -5.0, deckZ = 0.2, loadY = -1.6, frontY = 2.0 }
+Config.Profiles = {
+    energyrampamec = {
+        frontY = 1.14492959976196, deckZ = 0.2421760559082,
+        loadY = -2.45507040023803, rearY = -5.855,
+        rampX = 0, rampY = 0, rampZ = 0, rampPitch = -12, rampYaw = 0
+    }
+}

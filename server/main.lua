@@ -239,8 +239,12 @@ lib.callback.register('ts_flatbed:lift', function(src, action, id, target, data)
             return fail('De auto moet leeg en stilstaand in dezelfde wereld zijn.')
         end
         if type(data) ~= 'table' or not FB.finite(data.front, 0.4, 3.5) or not FB.finite(data.rear, -3.5, -0.4)
-            or not FB.finite(data.bottom, -2.5, 0) or not FB.finite(data.halfWidth, 0.5, 1.3)
+            or not FB.finite(data.bottom, -2.5, 0) or not FB.finite(data.halfWidth, 0.5, Config.WheelLift.maxWidth * 0.5)
             or data.front - data.rear > 5.5 then return fail('Ongeldige voertuigafmetingen.') end
+        if (data.rearBottom ~= nil and not FB.finite(data.rearBottom,-2.5,0))
+            or (data.rearHalfWidth ~= nil and not FB.finite(data.rearHalfWidth,0.5,Config.WheelLift.maxWidth * 0.5)) then
+            return fail('Ongeldige achterwielafmetingen.')
+        end
         local x,y = offset(truck, car)
         local desired = r.liftGeometry.rearY - Config.WheelLift.reach - data.front
         local heading = math.abs((GetEntityHeading(car)-GetEntityHeading(truck)+180)%360-180)
@@ -248,7 +252,8 @@ lib.callback.register('ts_flatbed:lift', function(src, action, id, target, data)
             return fail('Zet de voorwielen recht boven de lepel, neus richting vrachtwagen.')
         end
         r.liftTarget, r.liftEntity = target, car
-        r.liftData = {front=data.front,rear=data.rear,bottom=data.bottom,halfWidth=data.halfWidth}
+        r.liftData = {front=data.front,rear=data.rear,bottom=data.bottom,halfWidth=data.halfWidth,
+            rearBottom=data.rearBottom or data.bottom,rearHalfWidth=data.rearHalfWidth or data.halfWidth}
         cargoOwners[target] = id
     elseif action == 'detach' then
         if not r.liftTarget or not empty(entity(r.liftTarget)) then return fail('Laat iedereen uit de tweede auto stappen.') end

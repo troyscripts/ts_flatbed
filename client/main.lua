@@ -41,13 +41,22 @@ local function occupied(car)
     return false
 end
 local function prepareRamp()
-    if rampBounds then return true end
     local hash = joaat(Config.RampModel)
+    if rampBounds and HasModelLoaded(hash) and HasCollisionForModelLoaded(hash) then return true end
     if not IsModelInCdimage(hash) or not IsModelValid(hash) then
         notify('Oprijplaatmodel ontbreekt: '..Config.RampModel, 'error'); return false
     end
     local ok = pcall(lib.requestModel, hash, 5000)
     if not ok then notify('Oprijplaten konden niet geladen worden.', 'error'); return false end
+    local deadline = GetGameTimer() + 5000
+    repeat
+        RequestCollisionForModel(hash)
+        if HasCollisionForModelLoaded(hash) then break end
+        Wait(0)
+    until GetGameTimer() > deadline
+    if not HasCollisionForModelLoaded(hash) then
+        notify('Botsingsmodel van de rijplaten kon niet geladen worden.', 'error'); return false
+    end
     local low, high = GetModelDimensions(hash)
     rampBounds = { low = low, high = high }
     return true
@@ -463,6 +472,13 @@ CreateThread(function()
                         if obj ~= 0 then
                             SetEntityAsMissionEntity(obj, true, true)
                             AttachEntityToEntity(obj, truck, -1, g.rampX, g.rampY, g.rampZ, g.rampPitch, 0.0, g.rampYaw, false, false, false, false, 2, true)
+                            -- Gebruik de attachment alleen voor de exacte wereldtransformatie.
+                            -- De truck staat stil: de plaat kan zelfstandig collision dragen.
+                            ProcessEntityAttachments(truck)
+                            DetachEntity(obj, false, true)
+                            SetEntityCollision(obj, true, true)
+                            SetEntityLoadCollisionFlag(obj, true)
+                            FreezeEntityPosition(obj, true)
                             props[id] = { entity = obj, truck = truck }
                         end
                     end

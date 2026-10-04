@@ -145,7 +145,15 @@ assert(action(1,'rampsOn',100,nil,g).ok==false)
 tick()
 ents[103]={pos=v(0,-6.65,-0.6),model=456,type=2}
 local second={front=1.4,rear=-1.4,bottom=-0.4,halfWidth=0.8}
+second.rearBottom=0/0
+assert(not lift('attach',103,second).ok, 'reject nonfinite rear contact')
+second.rearBottom=-0.45
+second.rearHalfWidth=2.0
+assert(not lift('attach',103,second).ok, 'reject excessive rear track')
+second.halfWidth=1.5
+second.rearHalfWidth=1.5
 assert(lift('attach',103,second).ok)
+assert(latest().liftData.rearBottom==-0.45 and latest().liftData.rearHalfWidth==1.5)
 assert(latest().target==101 and latest().liftTarget==103)
 tick()
 assert(lift('stow').ok==false)

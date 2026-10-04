@@ -5,19 +5,33 @@ local api = FlatbedClient
 if not api then return end
 local selected, busy
 local carried, motion, heights = {}, {}, {}
+local dollyMotion = {}
 local function dimensions(car)
     local low, high = GetModelDimensions(GetEntityModel(car))
     local front, rear = high.y * 0.65, low.y * 0.65
-    for _, entry in ipairs({{'wheel_lf','front'}, {'wheel_lr','rear'}}) do
+    local bottom, rearBottom = math.min(-0.05, low.z), math.min(-0.05, low.z)
+    local halfWidth, rearHalfWidth = (high.x-low.x)*0.40, (high.x-low.x)*0.40
+    for _, entry in ipairs({{'wheel_lf','front',0}, {'wheel_lr','rear',2}}) do
         local bone = GetEntityBoneIndexByName(car, entry[1])
         if bone ~= -1 then
             local w = GetWorldPositionOfEntityBone(car, bone)
             local p = GetOffsetFromEntityGivenWorldCoords(car, w.x,w.y,w.z)
-            if entry[2]=='front' and p.y>0.4 then front=p.y end
-            if entry[2]=='rear' and p.y< -0.4 then rear=p.y end
+            local radius = p.z-low.z
+            if GetVehicleNumberOfWheels(car)==4 then
+                local size = GetVehicleWheelTireColliderSize(car, entry[3])
+                if FB.finite(size,0.15,1.0) then radius=size end
+            end
+            local contact = FB.clamp(p.z-FB.clamp(radius,0.15,1.0), -2.5, 0)
+            if entry[2]=='front' and p.y>0.4 then
+                front, bottom, halfWidth = p.y, contact, math.abs(p.x)
+            end
+            if entry[2]=='rear' and p.y< -0.4 then
+                rear, rearBottom, rearHalfWidth = p.y, contact, math.abs(p.x)
+            end
         end
     end
-    return {front=front,rear=rear,bottom=math.min(-0.05,low.z),halfWidth=(high.x-low.x)*0.40}, low, high
+    return {front=front,rear=rear,bottom=bottom,rearBottom=rearBottom,
+        halfWidth=halfWidth,rearHalfWidth=rearHalfWidth}, low, high
 end
 local function doAction(name, truck, car)
     if busy then return end
@@ -88,7 +102,8 @@ local function box(truck,x,y,z,sx,sy,sz,yaw,yellow)
     local c,s=math.cos(yaw or 0),math.sin(yaw or 0)
     for i,k in ipairs(corners) do
         local dx,dy=k[1]*sx*0.5,k[2]*sy*0.5
-        v[i]=GetOffsetFromEntityInWorldCoords(truck,x+dx*c-dy*s,y+dx*s+dy*c,z+k[3]*sz*0.5)
+        local px,py,pz=x+dx*c-dy*s,y+dx*s+dy*c,z+k[3]*sz*0.5
+        v[i]=type(truck)=='function' and truck(px,py,pz) or GetOffsetFromEntityInWorldCoords(truck,px,py,pz)
     end
     for i,f in ipairs(faces) do
         local tone=i==2 and 95 or 55
@@ -124,6 +139,54 @@ local function drawLift(truck,r,height,yaw)
         part(x,0.23,0.06,0.65,0.12,0.14,true)
     end
 end
+-- Wielkarretjes worden net als de lepel lokaal getekend voor iedere waarnemer.
+-- De banden blijven op de steunen; de kleine dollywielen draaien op afgelegde afstand.
+local function drawDollies(car,r)
+    local cfg=Config.WheelLift.dollies
+    if not cfg or not cfg.enabled then return end
+    local d=r.liftData
+    local pos=GetEntityCoords(car)
+    local heading=math.rad(GetEntityHeading(car))
+    local c,s=math.cos(heading),math.sin(heading)
+    local previous=dollyMotion[r.liftTarget]
+    local phase=previous and previous.phase or 0
+    if previous then
+        local dx,dy=pos.x-previous.pos.x,pos.y-previous.pos.y
+        if dx*dx+dy*dy<25 then phase=(phase+(-dx*s+dy*c)/cfg.wheelRadius)%(math.pi*2) end
+    end
+    dollyMotion[r.liftTarget]={pos=pos,phase=phase}
+    local function tri(a,b,c,red,green,blue)
+        DrawPoly(a.x,a.y,a.z,b.x,b.y,b.z,c.x,c.y,c.z,red,green,blue,255)
+        DrawPoly(c.x,c.y,c.z,b.x,b.y,b.z,a.x,a.y,a.z,red,green,blue,255)
+    end
+    for _,side in ipairs({-1,1}) do
+        local contact=GetOffsetFromEntityInWorldCoords(car,(d.rearHalfWidth or d.halfWidth)*side,d.rear,d.rearBottom or d.bottom)
+        local function world(x,y,z)
+            return vector3(contact.x+x*c-y*s,contact.y+x*s+y*c,contact.z-cfg.height+z)
+        end
+        local top=cfg.height
+        box(world,0,0,top-0.025,0.58,0.70,0.05,0)
+        box(world,0,-0.30,top+0.055,0.60,0.10,0.11,0,true)
+        box(world,0,0.30,top+0.055,0.60,0.10,0.11,0,true)
+        for _,x in ipairs({-0.34,0.34}) do
+            for _,y in ipairs({-0.24,0.24}) do
+                box(world,x,y,(top+cfg.wheelRadius)*0.5,0.06,0.07,top-cfg.wheelRadius,0)
+                local radius=cfg.wheelRadius
+                for segment=0,11 do
+                    local a,b=segment*math.pi/6+phase,(segment+1)*math.pi/6+phase
+                    local p=world(x-0.045,y+math.sin(a)*radius,radius+math.cos(a)*radius)
+                    local q=world(x+0.045,y+math.sin(a)*radius,radius+math.cos(a)*radius)
+                    local u=world(x-0.045,y+math.sin(b)*radius,radius+math.cos(b)*radius)
+                    local v=world(x+0.045,y+math.sin(b)*radius,radius+math.cos(b)*radius)
+                    tri(p,q,v,24,24,27); tri(p,v,u,24,24,27)
+                    local tone=segment%3==0 and 170 or 65
+                    tri(world(x-0.045,y,radius),u,p,tone,tone,tone)
+                    tri(world(x+0.045,y,radius),q,v,tone,tone,tone)
+                end
+            end
+        end
+    end
+end
 local function carry(truck,car,r,height)
     local d,g=r.liftData,r.liftGeometry
     local anchor={x=0,y=g.rearY-Config.WheelLift.reach,z=g.bottom+height}
@@ -143,7 +206,10 @@ local function carry(truck,car,r,height)
     local rad=math.rad(heading)
     local rearX,rearY=hook.x+math.sin(rad)*wheelbase,hook.y-math.cos(rad)*wheelbase
     local found,ground=GetGroundZFor_3dCoord(rearX,rearY,hook.z+4.0,false)
-    local pitch=found and math.deg(math.asin(FB.clamp((hook.z-ground)/wheelbase,-0.35,0.35))) or 8.0
+    local dollies=Config.WheelLift.dollies
+    local rearHeight=dollies and dollies.enabled and dollies.height or 0.0
+    local pitch=found and math.deg(FB.liftPitch(wheelbase,d.bottom,d.rearBottom or d.bottom,hook.z-ground-rearHeight))
+        or (old and old.pitch or 8.0)
     pitch=pitch-GetEntityPitch(truck)
     local p,a=math.rad(pitch),math.rad(relative)
     local along=d.front*math.cos(p)-d.bottom*math.sin(p)
@@ -151,7 +217,7 @@ local function carry(truck,car,r,height)
     AttachEntityToEntity(car,truck,-1,anchor.x+math.sin(a)*along,anchor.y-math.cos(a)*along,
         anchor.z-vertical,pitch,0,relative,false,false,false,false,2,true)
     SetVehicleHandbrake(car,false)
-    motion[r.liftTarget]={heading=heading,hook=hook}
+    motion[r.liftTarget]={heading=heading,hook=hook,pitch=pitch+GetEntityPitch(truck)}
 end
 
 CreateThread(function()
@@ -194,6 +260,7 @@ CreateThread(function()
                     sleep=0
                     local yaw=car~=0 and ((GetEntityHeading(car)-GetEntityHeading(truck)+180)%360-180) or 0
                     drawLift(truck,r,height,yaw)
+                    if car~=0 then drawDollies(car,r) end
                 end
             else heights[id]=nil end
         end
@@ -201,6 +268,7 @@ CreateThread(function()
             if not wanted[id] then
                 if DoesEntityExist(pair.car) and NetworkHasControlOfEntity(pair.car) and IsEntityAttachedToEntity(pair.car,pair.truck) then api.freeCar(pair.car) end
                 motion[id]=nil
+                dollyMotion[id]=nil
             end
         end
         carried=wanted

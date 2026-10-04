@@ -1,6 +1,6 @@
 # TroyScripts — ts_flatbed
 
-**Versie 0.1.1-beta · 4 oktober 2026**
+**Script 0.5.0 · Config 1.0.0 · 4 oktober 2026**
 
 Flatbedbediening voor de vaste laadbak van `energyrampamec`: plaatsbare oprijplaten,
 een geleide lier, vastzetten en afladen. Tijdens de lierbeweging houdt de bediener
@@ -12,7 +12,7 @@ targetregistratie, controle of je personage dood is, voortgang en invoervensters
 De koppeling is gemaakt tegen de bestaande API 1 uit je aangetroffen bridgebestanden
 en de 0.0.8-update. **Er is geen wijziging aan ts_bridge nodig.**
 
-## Wat deze eerste versie doet
+## Functies
 
 - Rijplaten plaatsen/opbergen via ox_target of `/flatbed`.
 - Bestaand GTA-model `imp_prop_flatbed_ramp` als complete oprijconstructie.
@@ -110,19 +110,32 @@ afladen. Beide auto's blijven afzonderlijk geregistreerd.
 De lepel is een **door het script getekende metalen constructie**, zonder apart
 gestreamd propmodel of eigen collision. De tweede auto wordt via een geleide,
 meedraaiende attachment vastgehouden; het is geen ingebouwde GTA-towtruck-lepel
-met volledige wiel-/ophangingsphysics. Het script benadert de hoogte bij de
-achterwielen met een grondmeting. Test bochten, achteruitrijden en hellingen in-game.
+met volledige wiel-/ophangingsphysics. Onder beide achterbanden verschijnen automatisch wielkarretjes met elk vier
+draaiende wieltjes. De achterwielhoogte houdt rekening met deze steunen; de
+wieltjes draaien op basis van de afgelegde afstand, ook achteruit. Ze verdwijnen
+bij losmaken. Dit is visuele ondersteuning binnen dezelfde geleide koppeling,
+geen afzonderlijke dolly-physics. De banden worden gemeten via de wielbotten en
+het band-collisionformaat (met modelmaten als fallback). Test bochten,
+achteruitrijden, verhoogde wegen en hellingen in-game. Met
+`Config.WheelLift.dollies.enabled = false` vervallen de karretjes en wordt de
+achterwielhoogte weer op de grond gericht.
 Positie, hoogte, maximaal stuurhoekverschil en maximale voertuigafmetingen staan in
 `Config.WheelLift`. Motorfietsen en fietsen worden niet aan de lepel gekoppeld.
 
 ## De eerste afstelling voor dit voertuig
 
-De YFT-bestanden zijn beveiligd en deze omgeving kan FiveM niet starten. Daarom
-zijn de exacte pasvorm, prop-collision, animatie en netwerksynchronisatie nog niet
-in GTA getest. Ook de tweede auto en de getekende lepel moeten op je server worden
-gecontroleerd. De beginwaarden worden uit modelafmetingen berekend; het script
-probeert daarnaast de bovenkant van de laadbak met een botsingsmeting te vinden.
-**Beschouw dit als een eerste testversie, niet als een in-game gevalideerde release.**
+Het standaardprofiel voor `energyrampamec` bevat de aangeleverde kalibratie exact,
+inclusief achterrand Y -5.855, dekhoogte Z 0.2421760559082 en rampcorrectie -12°.
+Een bestaand `calibration.json` blijft voorrang houden. Dit bestand wordt niet
+meegeleverd of overschreven; je aangeleverde instellingen zijn in `config.lua`
+opgenomen.
+
+De lierroute is door jou in-game getest. De nieuwe wielkarretjes, fysieke
+rijplaat-collision en multiplayerweergave moeten nog op je server worden getest;
+de ontwikkelomgeving kan FiveM niet starten. Rijplaten worden nu zelfstandig
+bevroren geplaatst, met expliciet geladen en ingeschakelde collision. Een
+geleide lierbeweging alleen bewijst niet dat een auto ook fysiek op de platen kan
+rijden. De collision-vorm van het gebruikte propmodel blijft bepalend.
 
 Begin met één normale personenauto. Controleer eerst of de rijplaten werkelijk de
 grond en de achterrand raken. Test zelf langzaam oprijden vóór het testen van de
@@ -218,7 +231,9 @@ scenario's zijn met gesimuleerde FiveM-functies getest: concurrerende gebruikers
 ongeldige tokens, laden/lossen, annuleren, inzittenden, routing buckets, afstand,
 disconnect, afstelrechten, bridge-jobcontrole, twee auto's tegelijk, onderlinge
 blokkering van rijplaten/lepel en opruimen bij resource-stop. Dat vervangt geen test
-met het daadwerkelijke voertuig op een FiveM-server.
+met het daadwerkelijke voertuig op een FiveM-server. Voor 0.5.0 zijn ook
+de achterwiel-steunhoogte, ongelijke wielcontactpunten, een gesimuleerd clientframe
+met dollies, cleanup, configversiecontrole en de bridge-checker-aanroep getest.
 
 Bronnen voor de gebruikte interfaces:
 
@@ -227,7 +242,48 @@ Bronnen voor de gebruikte interfaces:
 - https://coxdocs.dev/ox_lib
 - https://coxdocs.dev/ox_target
 
+## Update naar 0.5.0 en versiecontrole
+
+Dit updatepakket bevat alleen gewijzigde en nieuwe bestanden, cumulatief vanaf
+0.1.0-beta. Pak de map `ts_flatbed` over de bestaande resource uit. **Deze keer
+wordt config.lua wel vervangen**, omdat de nieuwe standaardkalibratie en
+configversie zijn aangevraagd. Neem eigen jobs, ACE-rechten en overige instellingen
+over in de nieuwe config. Bewaar je `calibration.json`. Herstart met een lege
+truck: `restart ts_flatbed`.
+
+De lokale configcontrole verwacht `Config.Version = '1.0.0'`. Bij een oude of
+ontbrekende versie start de bediening niet en verschijnt een duidelijke melding.
+De scriptversie in `fxmanifest.lua` is onafhankelijk hiervan `0.5.0`.
+
+`server/update_check.lua` gebruikt de bestaande serverexport
+`exports.ts_bridge:CheckForUpdates(Config.UpdateCheck)`. **ts_bridge blijft
+0.0.8; geen bridge-update is nodig.** De checker leest `version.json` uit de
+standaardbranch van `troyscripts/ts_flatbed`, vergelijkt numerieke versies en
+meldt updates in de serverconsole. Het installeren blijft handmatig. Uitschakelen:
+`Config.UpdateCheck.Enabled = false`.
+
+Plaats de meegeleverde **version.json in de hoofdmap van je GitHub-repository**,
+naast `fxmanifest.lua`. De repository is gecontroleerd; dit bestand stond er bij
+het maken van de update nog niet. Deze download publiceert niets naar GitHub.
+Zonder dat bestand meldt de checker HTTP 404. Verhoog bij volgende releases zowel
+de manifestversie als `version` in dit JSON-bestand; verhoog de configversie
+alleen als het configuratieformaat verandert. De bridge verwerkt time-outs,
+ongeldige antwoorden en een lokale versie die nieuwer is dan GitHub.
+
 ## Changelog
+
+### 0.5.0 / config 1.0.0
+
+- Maximale laadbak-autobreedte 3.0 m en lepel-autobreedte 3.2 m; de servercontrole
+  op wielafstand volgt de ingestelde lepelbreedte.
+- Achterwielkarretjes voor de tweede auto, met draaiende wieltjes en opruimen bij losmaken.
+- Hoogte van de tweede auto berekend uit wielcontactpunten en dollyhoogte.
+- Achterwielmaten servermatig begrensd en met andere spelers gedeeld.
+- Aangeleverde kalibratie als standaardprofiel voor energyrampamec.
+- Rijplaten als vaste wereldobjecten met expliciete collision-loading en collision aan.
+- Configversiecontrole en GitHub-versiecontrole via de bestaande ts_bridge-export.
+- version.json voor de hoofdmap van troyscripts/ts_flatbed.
+
 
 ### 0.1.1-beta
 
