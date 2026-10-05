@@ -2,7 +2,7 @@ fx_version 'cerulean'
 game 'gta5'
 author 'TroyScripts'
 description 'Vaste laadbak met oprijplaten, geleide lier en voertuigtransport'
-version '0.5.2'
+version '0.5.3'
 config_version '1.1.0'
 
 shared_scripts {

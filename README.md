@@ -1,6 +1,6 @@
 # TroyScripts — ts_flatbed
 
-**Script 0.5.2 · Config 1.1.0 · 4 oktober 2026**
+**Script 0.5.3 · Config 1.1.0 · 4 oktober 2026**
 
 Flatbedbediening voor de vaste laadbak van `energyrampamec`: plaatsbare oprijplaten,
 een geleide lier, vastzetten en afladen. Tijdens de lierbeweging houdt de bediener
@@ -261,18 +261,16 @@ Bronnen voor de gebruikte interfaces:
 - https://coxdocs.dev/ox_lib
 - https://coxdocs.dev/ox_target
 
-## Update naar 0.5.2 en versiecontrole
+## Update naar 0.5.3 en versiecontrole
 
-Dit updatepakket bevat alleen gewijzigde en nieuwe bestanden, ten opzichte van
-0.5.0. Pak de map `ts_flatbed` over de bestaande resource uit. **Deze keer
-wordt config.lua wel vervangen**, omdat de nieuwe lepelinstellingen en
-configversie zijn aangevraagd. Neem eigen jobs, ACE-rechten en overige instellingen
-over in de nieuwe config. Bewaar je `calibration.json`. Herstart met een lege
-truck: `restart ts_flatbed`.
+Dit pakket bevat alleen gewijzigde bestanden ten opzichte van 0.5.2. Installeer
+het over 0.5.2 en herstart met een lege truck: `restart ts_flatbed`. Config.lua en
+calibration.json worden niet meegeleverd; configversie blijft 1.1.0. Er is geen
+nieuwe succesvolle-configmelding in de console toegevoegd.
 
 De lokale configcontrole verwacht `Config.Version = '1.1.0'`. Bij een oude of
 ontbrekende versie start de bediening niet en verschijnt een duidelijke melding.
-De scriptversie in `fxmanifest.lua` is onafhankelijk hiervan `0.5.2`.
+De scriptversie in `fxmanifest.lua` is onafhankelijk hiervan `0.5.3`.
 
 `server/update_check.lua` gebruikt de bestaande serverexport
 `exports.ts_bridge:CheckForUpdates(Config.UpdateCheck)`. **ts_bridge blijft
@@ -290,6 +288,29 @@ alleen als het configuratieformaat verandert. De bridge verwerkt time-outs,
 ongeldige antwoorden en een lokale versie die nieuwer is dan GitHub.
 
 ## Changelog
+
+### 0.5.3 / config blijft 1.1.0
+
+- De passagiersmodule vernieuwt de vaste laadbak-attachment alleen na een
+  gewijzigde laadpositie, wisseling van netwerkcontrole of verbroken koppeling.
+- De lepel vernieuwt de attachment alleen bij een positieverschil groter dan
+  1 cm of hoekverschil groter dan 0.25 graad, met maximaal 20 updates/seconde.
+  De bestaande attachment volgt de truck ook tussen die updates.
+- Eerste koppeling, herstel van een verbroken koppeling en overname van
+  netwerkcontrole gebeuren direct, zonder de updatebegrenzer af te wachten.
+- Bewegingshistorie van de lepel vervalt bij verlies van netwerkcontrole.
+- Schadevlaggen worden eenmaal ingesteld bij overname, niet opnieuw elk frame.
+  Collision en tijdelijke botsingsuitsluiting tussen trekker en lading blijven actief.
+- Tests met gesimuleerde frames controleren herhaling, updatebegrenzing,
+  koppelingsherstel en overname. Dit bewijst geen lagere multiplayervertraging:
+  daarvoor is een nieuwe in-game test met twee spelers nodig.
+
+Test dezelfde route met iemand op de bestuurdersstoel van de vervoerde auto.
+Vergelijk leeg vervoer, meerijden op de laadbak en meerijden aan de lepel. Als
+vertraging blijft bestaan, noteer bij wie het zichtbaar is, of de auto achterloopt
+of het hele beeld hapert, en de ping van beide spelers. Instappen op een
+passagiersstoel kan als vergelijking helpen om de invloed van netwerkcontrole
+te onderscheiden, maar is geen vereiste van deze update.
 
 ### 0.5.2 / config blijft 1.1.0
 

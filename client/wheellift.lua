@@ -215,10 +215,20 @@ local function carry(truck,car,r,height)
     local p,a=math.rad(pitch),math.rad(relative)
     local along=d.front*math.cos(p)-d.bottom*math.sin(p)
     local vertical=d.front*math.sin(p)+d.bottom*math.cos(p)
-    AttachEntityToEntity(car,truck,-1,anchor.x+math.sin(a)*along,anchor.y-math.cos(a)*along,
-        anchor.z-vertical,pitch,0,relative,false,false,true,false,2,true)
+    local x,y,z=anchor.x+math.sin(a)*along,anchor.y-math.cos(a)*along,anchor.z-vertical
+    local now=GetGameTimer()
+    local placed=old and old.placed
+    -- GTA laat een bestaande attachment vanzelf met de truck meebewegen.
+    -- Alleen gewijzigde offsets/hoeken verzenden, maximaal 20 keer per seconde.
+    local detached=not IsEntityAttachedToEntity(car,truck)
+    local changed=not placed or (x-placed.x)^2+(y-placed.y)^2+(z-placed.z)^2>0.0001
+        or math.abs(pitch-placed.pitch)>0.25 or math.abs(relative-placed.yaw)>0.25
+    if detached or not placed or (changed and now-placed.at>=50) then
+        AttachEntityToEntity(car,truck,-1,x,y,z,pitch,0,relative,false,false,true,false,2,true)
+        placed={x=x,y=y,z=z,pitch=pitch,yaw=relative,at=now}
+    end
     SetVehicleHandbrake(car,false)
-    motion[r.liftTarget]={heading=heading,hook=hook,pitch=pitch+GetEntityPitch(truck)}
+    motion[r.liftTarget]={heading=heading,hook=hook,pitch=pitch+GetEntityPitch(truck),placed=placed}
 end
 
 CreateThread(function()
@@ -252,14 +262,22 @@ CreateThread(function()
                 local car=api.entity(r.liftTarget)
                 if car~=0 then
                     sleep=0
-                    wanted[r.liftTarget]={car=car,truck=truck}
-                    if NetworkHasControlOfEntity(car) then
+                    local owns=NetworkHasControlOfEntity(car)
+                    local previous=carried[r.liftTarget]
+                    local acquired=owns and (not previous or not previous.owner or previous.car~=car or previous.truck~=truck)
+                    wanted[r.liftTarget]={car=car,truck=truck,owner=owns}
+                    if owns then
+                        if acquired then motion[r.liftTarget]=nil end
                         carry(truck,car,r,height)
                         -- Normale schade toestaan; bestaande motor/body-schade blijft intact.
-                        SetEntityInvincible(car,false)
-                        SetEntityCanBeDamaged(car,true)
-                        SetVehicleCanBeVisiblyDamaged(car,true)
-                        SetVehicleCanBreak(car,true)
+                        if acquired then
+                            SetEntityInvincible(car,false)
+                            SetEntityCanBeDamaged(car,true)
+                            SetVehicleCanBeVisiblyDamaged(car,true)
+                            SetVehicleCanBreak(car,true)
+                        end
+                    else
+                        motion[r.liftTarget]=nil
                     end
                     -- Ook op de client van een aanrijdende speler, na iedere attachment-update.
                     SetEntityCollision(car,true,true)
