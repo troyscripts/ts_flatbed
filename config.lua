@@ -37,7 +37,7 @@ Config.WheelLift = {
     loweredHeight = 0.18, -- hoogte boven modelonderkant, onbeladen
     raisedHeight = 0.60, -- voorwielen boven modelonderkant, beladen
     maxAngle = 55.0, -- begrenzing van de meedraaiende tweede auto
-    maxLength = 10.0,
+    maxLength = 30.0,
     maxWidth = 3.5,
     renderDistance = 70.0,
     -- Twee zichtbare wielkarretjes onder de achterwielen, automatisch bij koppelen.
