@@ -1,6 +1,7 @@
 if not FBBridge.ready() then return end
 local records, cargoOwners, limits, calibrations = {}, {}, {}, {}
 local serial = 0
+local snapshotLimits = {}
 local models = {}
 for name in pairs(Config.Models) do models[joaat(name)] = name end
 local raw = LoadResourceFile(GetCurrentResourceName(), 'calibration.json')
@@ -19,7 +20,8 @@ local function allowed(src)
     if Config.Jobs then
         local job = FBBridge.job(src)
         local grade = job and Config.Jobs[job.name]
-        return grade ~= nil and tonumber(job.grade) >= grade
+        local actualGrade = job and tonumber(job.grade)
+        return type(grade) == 'number' and FB.finite(actualGrade) and actualGrade >= grade
     end
     return true
 end
@@ -106,7 +108,9 @@ local function rate(src, delay)
 end
 
 lib.callback.register('ts_flatbed:snapshot', function(src)
-    if not rate(src, 300) then return { records = {}, calibrations = calibrations } end
+    local now = GetGameTimer()
+    if snapshotLimits[src] and now - snapshotLimits[src] < 300 then return nil end
+    snapshotLimits[src] = now
     local result = {}
     for id, r in pairs(records) do result[tostring(id)] = public(r) end
     return { records = result, calibrations = calibrations }
@@ -145,7 +149,7 @@ lib.callback.register('ts_flatbed:action', function(src, action, id, target, dat
     if action == 'hook' or action == 'secure' then
         if not r.ramps or r.target then return fail('Plaats de rijplaten en maak de vorige auto eerst los.') end
         local car = entity(target)
-        if car == 0 or car == truck or GetEntityType(car) ~= 2 or cargoOwners[target] or records[target] then
+        if car == 0 or car == truck or GetEntityType(car) ~= 2 or cargoOwners[target] or records[target] or models[GetEntityModel(car)] then
             return fail('Dit voertuig kan niet worden gekoppeld.')
         end
         if GetEntityRoutingBucket(car) ~= GetEntityRoutingBucket(truck)
@@ -246,10 +250,12 @@ lib.callback.register('ts_flatbed:lift', function(src, action, id, target, data)
             or (data.rearHalfWidth ~= nil and not FB.finite(data.rearHalfWidth,0.5,Config.WheelLift.maxWidth * 0.5)) then
             return fail('Ongeldige achterwielafmetingen.')
         end
-        local x,y = offset(truck, car)
+        local x,y,z = offset(truck, car)
         local desired = r.liftGeometry.rearY - Config.WheelLift.reach - data.front
         local heading = math.abs((GetEntityHeading(car)-GetEntityHeading(truck)+180)%360-180)
-        if math.abs(x)>0.8 or math.abs(y-desired)>1.5 or heading>15 then
+        if math.abs(x)>0.8 or math.abs(y-desired)>1.5 or heading>15
+            or math.abs(z + data.bottom - r.liftGeometry.bottom - Config.WheelLift.loweredHeight) > 2.0
+            or #(GetEntityCoords(car) - GetEntityCoords(truck)) > Config.MaxCableLength then
             return fail('Zet de voorwielen recht boven de lepel, neus richting vrachtwagen.')
         end
         r.liftTarget, r.liftEntity = target, car
@@ -271,7 +277,7 @@ RegisterNetEvent('ts_flatbed:finish', function(id, token, success)
     if not r or not r.busy or r.busy.actor ~= src or r.busy.token ~= token then return end
     if success ~= true then abort(r); return end
     local truck, car = entity(id), entity(r.target)
-    if truck == 0 or car == 0 or car ~= r.targetEntity or not near(src, truck) or not empty(car) then abort(r); return end
+    if truck == 0 or truck ~= r.entity or car == 0 or car ~= r.targetEntity or not near(src, truck) or not empty(car) then abort(r); return end
     local c, t = GetEntityCoords(car), GetEntityCoords(truck)
     if #(c - t) > Config.MaxCableLength + 2 then abort(r); return end
     local x, y, z = offset(truck, car)
@@ -315,6 +321,7 @@ end)
 AddEventHandler('playerDropped', function()
     local src = source
     limits[src] = nil
+    snapshotLimits[src] = nil
     for _, r in pairs(records) do
         if r.busy and r.busy.actor == src then abort(r) end
         if r.liftOperator == src then

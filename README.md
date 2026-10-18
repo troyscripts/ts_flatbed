@@ -1,6 +1,6 @@
 # TroyScripts — ts_flatbed
 
-**Script 0.5.3 · Config 1.1.0 · 4 oktober 2026**
+**Script 1.0.0 · Config 1.1.0 · 18 oktober 2026**
 
 Flatbedbediening voor de vaste laadbak van `energyrampamec`: plaatsbare oprijplaten,
 een geleide lier, vastzetten en afladen. Tijdens de lierbeweging houdt de bediener
@@ -11,6 +11,30 @@ Deze versie gebruikt je bestaande **ts_bridge** voor meldingen, jobcontrole,
 targetregistratie, controle of je personage dood is, voortgang en invoervensters.
 De koppeling is gemaakt tegen de bestaande API 1 uit je aangetroffen bridgebestanden
 en de 0.0.8-update. **Er is geen wijziging aan ts_bridge nodig.**
+
+## Nieuw in 1.0.0
+
+- Lading blijft vast en rijplaten blijven de truck blokkeren als de netwerkeigenaar buiten `StreamDistance` komt. Alleen de zichtbare rijplaten verdwijnen op afstand.
+- Lepelbediening houdt de truck ook client-side vast gedurende de bediening.
+- Na het laden van het rijplaatmodel wordt opnieuw gecontroleerd of de rijplaten nog nodig zijn.
+- Server weigert lepelkoppelingen met een ongeschikt hoogteverschil of te grote afstand, en weigert andere flatbeds als lading.
+- Ongeldige/ontbrekende jobrangen geven geen scriptfout meer; toegang wordt geweigerd.
+- De eerste synchronisatie heeft een eigen wachttijd en blokkeert geen gewone bediening meer.
+- Afhandeling van laadopdrachten controleert ook of de truck nog dezelfde entity is.
+- Scriptversie en versiechecker-metadata staan op 1.0.0. Config blijft ongewijzigd op 1.1.0.
+
+### Bijwerken
+
+Stop `ts_flatbed`, maak een back-up en vervang de bestanden uit dit pakket.
+Behoud je eigen `config.lua` (versie 1.1.0) en `calibration.json`.
+Start daarna `ts_flatbed` opnieuw. SQL-wijzigingen zijn niet nodig.
+
+### Verificatie
+
+De Lua-syntax en de meegeleverde tests met nagebootste FiveM-functies zijn gecontroleerd.
+Een echte FiveM-multiplayertest is nog nodig: laden/lossen, afbreken, lepel met inzittende,
+netwerkeigendom wisselen, weglopen buiten de zichtafstand en resource herstarten.
+Deze tests bootsen GTA-collision en netwerksynchronisatie niet na.
 
 ## Functies
 

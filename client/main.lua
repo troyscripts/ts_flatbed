@@ -461,12 +461,16 @@ CreateThread(function()
         local here, wanted, wantFrozen, wantSecured = GetEntityCoords(PlayerPedId()), {}, {}, {}
         for id, r in pairs(states) do
             local truck = networkEntity(id)
-            if truck ~= 0 and modelNames[GetEntityModel(truck)] == r.model and #(GetEntityCoords(truck) - here) < Config.StreamDistance then
-                if r.ramps then
-                    wanted[id], wantFrozen[truck] = true, true
+            if truck ~= 0 and modelNames[GetEntityModel(truck)] == r.model then
+                if r.ramps or r.remoteActive then
+                    wantFrozen[truck] = true
                     FreezeEntityPosition(truck, true)
+                end
+                -- Zichtafstand geldt alleen voor props, niet voor netwerk-eigendom of lading.
+                if r.ramps and #(GetEntityCoords(truck) - here) < Config.StreamDistance then
+                    wanted[id] = true
                     if props[id] and (not DoesEntityExist(props[id].entity) or props[id].truck ~= truck) then removeProp(id) end
-                    if not props[id] and prepareRamp() then
+                    if not props[id] and prepareRamp() and states[id] == r and r.ramps and DoesEntityExist(truck) then
                         local pos, g = GetEntityCoords(truck), r.geometry
                         local obj = CreateObjectNoOffset(joaat(Config.RampModel), pos.x, pos.y, pos.z, false, false, false)
                         if obj ~= 0 then

@@ -83,6 +83,10 @@ end
 local function latest()
  for i=#packets,1,-1 do if packets[i].name=='ts_flatbed:state' and packets[i].id==100 then return packets[i].data end end
 end
+assert(callbacks['ts_flatbed:snapshot'](1))
+assert(callbacks['ts_flatbed:action'](1,'rampsOn',100,nil,g).ok, 'snapshot must not rate-limit first action')
+assert(callbacks['ts_flatbed:snapshot'](1)==nil, 'rate-limited snapshot must not pretend world is empty')
+assert(action(1,'rampsOff').ok)
 assert(action(1,'load').ok==false)
 assert(action(1,'rampsOn',100,nil,g).ok)
 assert(ents[100].frozen)
@@ -156,6 +160,10 @@ assert(not lift('attach',103,second).ok, 'reject excessive rear track')
 second.halfWidth=1.7
 second.rearHalfWidth=1.7
 ents[2].car=103 -- eigenaar blijft als inzittende in de tweede auto
+local groundPosition=ents[103].pos
+ents[103].pos=v(groundPosition.x,groundPosition.y,40)
+assert(not lift('attach',103,second).ok, 'reject car above the wheel lift')
+ents[103].pos=groundPosition
 assert(lift('attach',103,second).ok)
 assert(latest().liftData.rearBottom==-0.45 and latest().liftData.rearHalfWidth==1.7)
 assert(latest().target==101 and latest().liftTarget==103)
@@ -174,6 +182,12 @@ print('PASS: two independent cars, wheel-lift/ramp interlock and lift release pr
 Config.Jobs={mechanic=2}
 assert(action(2,'rampsOff').ok==false)
 assert(action(1,'rampsOff').ok)
+local originalJob=exports.ts_bridge.GetJob
+exports.ts_bridge.GetJob=function()return {name='mechanic'}end
+assert(not action(1,'rampsOn',100,nil,g).ok, 'missing grade must deny without crashing')
+exports.ts_bridge.GetJob=function()return {name='mechanic',grade='invalid'}end
+assert(not action(1,'rampsOn',100,nil,g).ok, 'invalid grade must deny without crashing')
+exports.ts_bridge.GetJob=originalJob
 Config.Jobs=false
 assert(action(1,'rampsOn',100,nil,g).ok)
 print('PASS: job permission through the verified ts_bridge GetJob contract')

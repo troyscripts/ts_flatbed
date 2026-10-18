@@ -12,10 +12,11 @@ lua.lua_tolstring.argtypes = [ctypes.c_void_p, ctypes.c_int, ctypes.c_void_p]
 lua.lua_tolstring.restype = ctypes.c_char_p
 lua.lua_settop.argtypes = [ctypes.c_void_p, ctypes.c_int]
 lua.lua_close.argtypes = [ctypes.c_void_p]
+root = pathlib.Path(__file__).resolve().parents[1]
 state = lua.luaL_newstate()
 lua.luaL_openlibs(state)
 try:
-    for path in pathlib.Path('ts_flatbed').rglob('*.lua'):
+    for path in root.rglob('*.lua'):
         rc = lua.luaL_loadfilex(state, str(path).encode(), None)
         if rc:
             raise RuntimeError(lua.lua_tolstring(state, -1, None).decode())
