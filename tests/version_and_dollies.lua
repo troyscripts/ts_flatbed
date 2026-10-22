@@ -23,7 +23,7 @@ dofile('ts_flatbed/shared/config_version.lua')
 assert(not FBConfigValid and #log==1)
 dofile('ts_flatbed/shared/bridge.lua')
 assert(not FBBridge.ready(),'old config must stop before bridge access')
-Config.Version='1.1.0'
+Config.Version='1.1.1'
 dofile('ts_flatbed/shared/config_version.lua')
 local calls=0
 function CreateThread(f)f()end

@@ -1,5 +1,5 @@
 Config = {}
-Config.Version = '1.1.0'
+Config.Version = '1.1.1'
 Config.UpdateCheck = { Enabled = true, Repository = 'troyscripts/ts_flatbed' }
 
 -- Gebruik de echte spawnnaam. Standaard gebaseerd op het aangeleverde YFT.
@@ -19,6 +19,47 @@ Config.ControlTimeout = 2500
 Config.OperationTimeout = 90000
 Config.StreamDistance = 100.0
 Config.Debug = false
+
+-- Tijden in milliseconden. WheelLift + LiftGrace bepaalt de serververgrendeling.
+Config.Timing = {
+    ModelLoad = 5000,
+    Restore = 5000,
+    Selection = 60000,
+    Secure = 1400,
+    MinimumWinch = 1800,
+    RampAndHook = 1800,
+    WheelLift = 2000,
+    LiftGrace = 200,
+    ObstacleCheck = 300,
+    SnapshotRate = 300,
+    ActionRate = 350,
+    OperationReserve = 5000,
+}
+-- Snelheden in m/s; vermenigvuldig met 3.6 voor km/u.
+Config.SpeedLimits = {
+    Truck = 0.3,
+    LiftTruck = 0.25,
+    Cargo = 0.5,
+    ServerCargo = 0.6,
+    LiftCargo = 0.5,
+}
+-- Afstanden in meters, Heading in graden. Servermarges zijn ruimer voor synchronisatie.
+Config.Alignment = {
+    SecureSide = 0.65,
+    DeckEdge = 0.25,
+    DeckHeight = 0.6,
+    HookSide = 0.8,
+    HookFront = 0.5,
+    Heading = 12,
+    ServerSide = 1.5,
+    ServerHeading = 15,
+    HookBehind = 12,
+    LiftSide = 0.8,
+    LiftLongitudinal = 1.5,
+    LiftHeight = 2.0,
+    Finish = 0.8,
+}
+
 
 -- Visuele afstandsbediening; verschijnt vanzelf, geen inventory-item vereist.
 Config.Remote = {

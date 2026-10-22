@@ -46,9 +46,9 @@ local function prepareRamp()
     if not IsModelInCdimage(hash) or not IsModelValid(hash) then
         notify('Oprijplaatmodel ontbreekt: '..Config.RampModel, 'error'); return false
     end
-    local ok = pcall(lib.requestModel, hash, 5000)
+    local ok = pcall(lib.requestModel, hash, Config.Timing.ModelLoad)
     if not ok then notify('Oprijplaten konden niet geladen worden.', 'error'); return false end
-    local deadline = GetGameTimer() + 5000
+    local deadline = GetGameTimer() + Config.Timing.ModelLoad
     repeat
         RequestCollisionForModel(hash)
         if HasCollisionForModelLoaded(hash) then break end
@@ -168,7 +168,7 @@ end)
 RegisterNetEvent('ts_flatbed:restore', function(id, origin, model)
     if source ~= 65535 then return end
     local car = networkEntity(id)
-    pendingRestore[id] = { origin = origin, model = model, untilTime = GetGameTimer() + 5000 }
+    pendingRestore[id] = { origin = origin, model = model, untilTime = GetGameTimer() + Config.Timing.Restore }
     if car ~= 0 and GetEntityModel(car) == model and NetworkHasControlOfEntity(car) then
         freeCar(car, origin); pendingRestore[id] = nil
     end
@@ -179,7 +179,7 @@ local function eligible(car, truck, onBed, requireFit)
     if car == 0 or car == truck or not DoesEntityExist(car) or not net(car) then return false, 'Ongeldig voertuig.' end
     if IsEntityAttached(car) or modelNames[GetEntityModel(car)] then return false, 'Dit voertuig is al gekoppeld of zelf een flatbed.' end
     if occupied(car) then return false, 'Laat iedereen uit het voertuig stappen.' end
-    if GetEntitySpeed(car) > 0.5 then return false, 'Het voertuig moet stilstaan.' end
+    if GetEntitySpeed(car) > Config.SpeedLimits.Cargo then return false, 'Het voertuig moet stilstaan.' end
     local cls = GetVehicleClass(car)
     if cls == 14 or cls == 15 or cls == 16 or cls == 21 then return false, 'Dit voertuigtype kan niet op de laadbak.' end
     local low, high = GetModelDimensions(GetEntityModel(car))
@@ -189,18 +189,18 @@ local function eligible(car, truck, onBed, requireFit)
     local pos = GetEntityCoords(car)
     local offset = GetOffsetFromEntityGivenWorldCoords(truck, pos.x, pos.y, pos.z)
     if onBed then
-        if math.abs(offset.x) > 0.65 or offset.y + low.y < g.rearY - 0.25
-            or offset.y + high.y > g.frontY + 0.25 or math.abs(offset.z + low.z - g.deckZ) > 0.6 then
+        if math.abs(offset.x) > Config.Alignment.SecureSide or offset.y + low.y < g.rearY - Config.Alignment.DeckEdge
+            or offset.y + high.y > g.frontY + Config.Alignment.DeckEdge or math.abs(offset.z + low.z - g.deckZ) > Config.Alignment.DeckHeight then
             return false, 'Zet het voertuig recht en volledig op de laadbak.'
         end
     else
-        if math.abs(offset.x) > 0.8 or offset.y + high.y > g.toeY + 0.5
+        if math.abs(offset.x) > Config.Alignment.HookSide or offset.y + high.y > g.toeY + Config.Alignment.HookFront
             or #(pos - GetEntityCoords(truck)) > Config.MaxCableLength then
             return false, 'Zet de auto recht achter de rijplaten, met de neus naar de vrachtwagen.'
         end
     end
     local heading = math.abs((GetEntityHeading(car) - GetEntityHeading(truck) + 180) % 360 - 180)
-    if heading > 12 then return false, 'De auto moet dezelfde kant op wijzen als de vrachtwagen.' end
+    if heading > Config.Alignment.Heading then return false, 'De auto moet dezelfde kant op wijzen als de vrachtwagen.' end
     local plan, reason = FB.cargoPlan(low, high, g, requireFit or onBed)
     if not plan then
         print(('[ts_flatbed] Model %s | %s | min %s | max %s'):format(GetEntityModel(car),reason,low,high))
@@ -242,10 +242,10 @@ local function runOperation(action, truck, reply)
         local low, high = GetModelDimensions(GetEntityModel(car))
         local half = (high.y - low.y) * 0.32
         local endY = action == 'unload' and g.toeY - high.y - 0.75 or r.load.y
-        local duration = action == 'secure' and 1400 or math.max(1800, math.abs(endY - start.y) / Config.PullSpeed * 1000)
-        if duration > Config.OperationTimeout - 5000 then error('Auto te ver weg voor deze liersnelheid.') end
+        local duration = action == 'secure' and Config.Timing.Secure or math.max(Config.Timing.MinimumWinch, math.abs(endY - start.y) / Config.PullSpeed * 1000)
+        if duration > Config.OperationTimeout - Config.Timing.OperationReserve then error('Auto te ver weg voor deze liersnelheid.') end
         if Config.Remote.enabled then
-            lib.requestAnimDict(Config.Remote.dict, 5000)
+            lib.requestAnimDict(Config.Remote.dict, Config.Timing.ModelLoad)
             SetCurrentPedWeapon(PlayerPedId(), joaat('WEAPON_UNARMED'), true)
             TaskPlayAnim(PlayerPedId(), Config.Remote.dict, Config.Remote.clip, 3.0, 3.0, -1, 49, 0.0, false, false, false)
         end
@@ -264,9 +264,9 @@ local function runOperation(action, truck, reply)
             local live = states[id]
             if not live or not live.busy or live.target ~= r.target then error('Laadopdracht beëindigd door de server.') end
             if not NetworkHasControlOfEntity(car) then error('Netwerkcontrole verloren; laadpoging gestopt.') end
-            if GetEntitySpeed(truck) > 0.3 or FBBridge.dead(PlayerPedId()) or IsPedRagdoll(PlayerPedId()) or IsPedInAnyVehicle(PlayerPedId(), false)
+            if GetEntitySpeed(truck) > Config.SpeedLimits.Truck or FBBridge.dead(PlayerPedId()) or IsPedRagdoll(PlayerPedId()) or IsPedInAnyVehicle(PlayerPedId(), false)
                 or #(GetEntityCoords(PlayerPedId()) - GetEntityCoords(truck)) > Config.ServerDistance - 1 then error('Blijf naast de stilstaande vrachtwagen.') end
-            if now - lastCheck > 300 then
+            if now - lastCheck > Config.Timing.ObstacleCheck then
                 if occupied(car) or not areaClear(truck, car, g) then error('Laadstrook geblokkeerd of voertuig bezet.') end
                 lastCheck = now
             end
@@ -313,7 +313,7 @@ local function action(name, truck, target)
     local ok, err = xpcall(function()
         if not DoesEntityExist(truck) or not net(truck) then return end
         if IsPedInAnyVehicle(PlayerPedId(), false) then notify('Stap eerst uit.', 'error'); return end
-        if GetEntitySpeed(truck) > 0.3 then notify('Zet de vrachtwagen stil.', 'error'); return end
+        if GetEntitySpeed(truck) > Config.SpeedLimits.Truck then notify('Zet de vrachtwagen stil.', 'error'); return end
         local data
         if name == 'rampsOn' then
             if math.abs(GetEntityPitch(truck)) > Config.MaxSlope or math.abs(GetEntityRoll(truck)) > Config.MaxSlope then
@@ -339,7 +339,7 @@ local function action(name, truck, target)
             data = { z = z, y = y }
         end
         if name == 'rampsOn' or name == 'rampsOff' or name == 'hook' then
-            if not FBBridge.progress({ duration = 1800, label = name == 'hook' and 'Lier aansluiten' or 'Rijplaten verplaatsen',
+            if not FBBridge.progress({ duration = Config.Timing.RampAndHook, label = name == 'hook' and 'Lier aansluiten' or 'Rijplaten verplaatsen',
                 position = 'bottom', canCancel = true, disable = { move = true, car = true, combat = true },
                 anim = { dict = 'amb@world_human_vehicle_mechanic@male@base', clip = 'base' } }) then return end
         end
@@ -573,7 +573,7 @@ CreateThread(function()
         local sleep = 400
         if selecting then
             sleep = 0
-            if IsControlJustPressed(0, 177) or GetGameTimer() - selecting.at > 60000
+            if IsControlJustPressed(0, 177) or GetGameTimer() - selecting.at > Config.Timing.Selection
                 or not DoesEntityExist(selecting.truck) or IsEntityDead(PlayerPedId()) then selecting = nil; lib.hideTextUI() end
         end
         for id, r in pairs(states) do

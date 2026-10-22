@@ -109,7 +109,7 @@ end
 
 lib.callback.register('ts_flatbed:snapshot', function(src)
     local now = GetGameTimer()
-    if snapshotLimits[src] and now - snapshotLimits[src] < 300 then return nil end
+    if snapshotLimits[src] and now - snapshotLimits[src] < Config.Timing.SnapshotRate then return nil end
     snapshotLimits[src] = now
     local result = {}
     for id, r in pairs(records) do result[tostring(id)] = public(r) end
@@ -117,10 +117,10 @@ lib.callback.register('ts_flatbed:snapshot', function(src)
 end)
 
 lib.callback.register('ts_flatbed:action', function(src, action, id, target, data)
-    if type(action) ~= 'string' or not rate(src, 350) then return fail('Even wachten.') end
+    if type(action) ~= 'string' or not rate(src, Config.Timing.ActionRate) then return fail('Even wachten.') end
     local truck = validTruck(src, id)
     if not truck then return fail('Geen toegang of je staat te ver van de vrachtwagen.') end
-    if GetEntitySpeed(truck) > 0.3 then return fail('Zet de vrachtwagen eerst stil.') end
+    if GetEntitySpeed(truck) > Config.SpeedLimits.Truck then return fail('Zet de vrachtwagen eerst stil.') end
     local r = records[id]
     if r and r.entity ~= truck then
         restore(r, false); clearTarget(r); clearLift(r); records[id] = nil; r = nil
@@ -154,18 +154,18 @@ lib.callback.register('ts_flatbed:action', function(src, action, id, target, dat
         end
         if GetEntityRoutingBucket(car) ~= GetEntityRoutingBucket(truck)
             or #(GetEntityCoords(car) - GetEntityCoords(truck)) > Config.MaxCableLength
-            or GetEntitySpeed(car) > 0.6 or not empty(car) then
+            or GetEntitySpeed(car) > Config.SpeedLimits.ServerCargo or not empty(car) then
             return fail('Voertuig te ver weg, in beweging of nog bezet.')
         end
         if type(data) ~= 'table' or not FB.finite(data.z, -2, 5) then return fail('Ongeldige laadhoogte.') end
         if data.y ~= nil and not FB.finite(data.y,r.geometry.rearY,r.geometry.frontY) then return fail('Ongeldige laadpositie.') end
         local x, y, z = offset(truck, car)
         local heading = math.abs((GetEntityHeading(car) - GetEntityHeading(truck) + 180) % 360 - 180)
-        if math.abs(x) > 1.5 or heading > 15 then return fail('Zet het voertuig recht achter of op de laadbak.') end
-        if action == 'hook' and (y > r.geometry.toeY + 0.5 or y < r.geometry.toeY - 12) then
+        if math.abs(x) > Config.Alignment.ServerSide or heading > Config.Alignment.ServerHeading then return fail('Zet het voertuig recht achter of op de laadbak.') end
+        if action == 'hook' and (y > r.geometry.toeY + Config.Alignment.HookFront or y < r.geometry.toeY - Config.Alignment.HookBehind) then
             return fail('Zet het voertuig achter de rijplaten.')
         end
-        if action == 'secure' and (y < r.geometry.rearY or y > r.geometry.frontY or math.abs(z - data.z) > 0.6) then
+        if action == 'secure' and (y < r.geometry.rearY or y > r.geometry.frontY or math.abs(z - data.z) > Config.Alignment.DeckHeight) then
             return fail('Zet het voertuig eerst op de laadbak.')
         end
         local c = GetEntityCoords(car)
@@ -213,9 +213,9 @@ lib.callback.register('ts_flatbed:action', function(src, action, id, target, dat
 end)
 
 lib.callback.register('ts_flatbed:lift', function(src, action, id, target, data)
-    if not Config.WheelLift.enabled or type(action) ~= 'string' or not rate(src, 350) then return fail('Even wachten.') end
+    if not Config.WheelLift.enabled or type(action) ~= 'string' or not rate(src, Config.Timing.ActionRate) then return fail('Even wachten.') end
     local truck = validTruck(src, id)
-    if not truck or GetEntitySpeed(truck) > 0.25 then return fail('Ga naast de stilstaande vrachtwagen staan.') end
+    if not truck or GetEntitySpeed(truck) > Config.SpeedLimits.LiftTruck then return fail('Ga naast de stilstaande vrachtwagen staan.') end
     local r = records[id]
     if r and r.entity ~= truck then
         restore(r,false); clearTarget(r); clearLift(r); records[id]=nil; r=nil
@@ -239,7 +239,7 @@ lib.callback.register('ts_flatbed:lift', function(src, action, id, target, data)
         if car == 0 or car == truck or GetEntityType(car) ~= 2 or cargoOwners[target] or models[GetEntityModel(car)] then
             return fail('Deze auto kan niet aan de lepel.')
         end
-        if GetEntitySpeed(car) > 0.5 or GetEntityRoutingBucket(car) ~= GetEntityRoutingBucket(truck) then
+        if GetEntitySpeed(car) > Config.SpeedLimits.LiftCargo or GetEntityRoutingBucket(car) ~= GetEntityRoutingBucket(truck) then
             return fail('De auto moet stilstaand in dezelfde wereld zijn.')
         end
         if type(data) ~= 'table' or not FB.finite(data.front, 0.4, Config.WheelLift.maxLength)
@@ -253,8 +253,8 @@ lib.callback.register('ts_flatbed:lift', function(src, action, id, target, data)
         local x,y,z = offset(truck, car)
         local desired = r.liftGeometry.rearY - Config.WheelLift.reach - data.front
         local heading = math.abs((GetEntityHeading(car)-GetEntityHeading(truck)+180)%360-180)
-        if math.abs(x)>0.8 or math.abs(y-desired)>1.5 or heading>15
-            or math.abs(z + data.bottom - r.liftGeometry.bottom - Config.WheelLift.loweredHeight) > 2.0
+        if math.abs(x)>Config.Alignment.LiftSide or math.abs(y-desired)>Config.Alignment.LiftLongitudinal or heading>Config.Alignment.ServerHeading
+            or math.abs(z + data.bottom - r.liftGeometry.bottom - Config.WheelLift.loweredHeight) > Config.Alignment.LiftHeight
             or #(GetEntityCoords(car) - GetEntityCoords(truck)) > Config.MaxCableLength then
             return fail('Zet de voorwielen recht boven de lepel, neus richting vrachtwagen.')
         end
@@ -266,7 +266,7 @@ lib.callback.register('ts_flatbed:lift', function(src, action, id, target, data)
         if not r.liftTarget then return fail('Er hangt geen auto aan de lepel.') end
         clearLift(r)
     else return fail('Onbekende lepelactie.') end
-    r.liftOperator, r.liftUntil = src, GetGameTimer()+2200
+    r.liftOperator, r.liftUntil = src, GetGameTimer()+Config.Timing.WheelLift+Config.Timing.LiftGrace
     FreezeEntityPosition(truck, true)
     sync(r)
     return {ok=true,state=public(r)}
@@ -281,10 +281,10 @@ RegisterNetEvent('ts_flatbed:finish', function(id, token, success)
     local c, t = GetEntityCoords(car), GetEntityCoords(truck)
     if #(c - t) > Config.MaxCableLength + 2 then abort(r); return end
     local x, y, z = offset(truck, car)
-    if r.busy.action ~= 'unload' and (math.abs(x - r.load.x) > 0.8 or math.abs(y - r.load.y) > 0.8 or math.abs(z - r.load.z) > 0.8) then
+    if r.busy.action ~= 'unload' and (math.abs(x - r.load.x) > Config.Alignment.Finish or math.abs(y - r.load.y) > Config.Alignment.Finish or math.abs(z - r.load.z) > Config.Alignment.Finish) then
         abort(r); return
     end
-    if r.busy.action == 'unload' and (math.abs(x) > 1.5 or y > r.geometry.toeY) then abort(r); return end
+    if r.busy.action == 'unload' and (math.abs(x) > Config.Alignment.ServerSide or y > r.geometry.toeY) then abort(r); return end
     if r.busy.action == 'unload' then
         restore(r, false); clearTarget(r)
     else

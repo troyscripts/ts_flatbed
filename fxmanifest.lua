@@ -2,8 +2,8 @@ fx_version 'cerulean'
 game 'gta5'
 author 'TroyScripts'
 description 'Vaste laadbak met oprijplaten, geleide lier en voertuigtransport'
-version '1.0.0'
-config_version '1.1.0'
+version '1.0.1'
+config_version '1.1.1'
 
 shared_scripts {
     '@ox_lib/init.lua',

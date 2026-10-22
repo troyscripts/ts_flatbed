@@ -150,7 +150,7 @@ tick()
 ents[103]={pos=v(0,-6.65,-0.6),model=456,type=2}
 local second={front=3.8,rear=-3.8,bottom=-0.4,halfWidth=0.8}
 ents[103].pos=v(0,-4-Config.WheelLift.reach-second.front,-0.6)
-local tooLong={front=5.2,rear=-5.2,bottom=-0.4,halfWidth=0.8}
+local tooLong={front=Config.WheelLift.maxLength,rear=-Config.WheelLift.maxLength,bottom=-0.4,halfWidth=0.8}
 assert(not lift('attach',103,tooLong).ok, 'reject wheelbase beyond configured maxLength')
 second.rearBottom=0/0
 assert(not lift('attach',103,second).ok, 'reject nonfinite rear contact')
@@ -191,6 +191,34 @@ exports.ts_bridge.GetJob=originalJob
 Config.Jobs=false
 assert(action(1,'rampsOn',100,nil,g).ok)
 print('PASS: job permission through the verified ts_bridge GetJob contract')
+
+-- Changed settings must affect actual server decisions, without reloading code.
+Config.SpeedLimits.Truck=0.1
+ents[100].speed=0.2
+assert(not action(1,'rampsOff').ok)
+ents[100].speed=0.1
+assert(action(1,'rampsOff').ok)
+ents[100].speed=0
+Config.Timing.ActionRate=1000
+assert(not action(1,'rampsOn',100,nil,g).ok)
+now=now+1000
+assert(action(1,'rampsOn',100,nil,g).ok)
+Config.Timing.ActionRate=350
+Config.Alignment.ServerSide=0.4
+ents[101].pos=v(0.5,-12,-0.6)
+assert(not action(1,'hook',100,101,{z=0.84}).ok)
+ents[101].pos=v(0.4,-12,-0.6)
+assert(action(1,'hook',100,101,{z=0.84}).ok)
+assert(action(1,'unhook').ok)
+assert(action(1,'rampsOff').ok)
+Config.Timing.WheelLift=4200
+assert(lift('deploy',nil,{rearY=-4,bottom=-1}).ok)
+tick()
+assert(latest().remoteActive, 'longer lift operation must remain locked after 3500 ms')
+now=now+1000;assert(coroutine.resume(scheduler))
+assert(not latest().remoteActive, 'lift lock must clear after configured duration plus grace')
+print('PASS: configured speed, rate limit, alignment boundary and lift duration govern server actions')
+
 
 assert(callbacks['ts_flatbed:admin'](2,100).ok==false)
 assert(callbacks['ts_flatbed:admin'](1,100).ok)

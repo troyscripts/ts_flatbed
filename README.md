@@ -1,6 +1,6 @@
 # TroyScripts — ts_flatbed
 
-**Script 1.0.0 · Config 1.1.0 · 18 oktober 2026**
+**Script 1.0.1 · Config 1.1.1 · 22 oktober 2026**
 
 Flatbedbediening voor de vaste laadbak van `energyrampamec`: plaatsbare oprijplaten,
 een geleide lier, vastzetten en afladen. Tijdens de lierbeweging houdt de bediener
@@ -11,6 +11,13 @@ Deze versie gebruikt je bestaande **ts_bridge** voor meldingen, jobcontrole,
 targetregistratie, controle of je personage dood is, voortgang en invoervensters.
 De koppeling is gemaakt tegen de bestaande API 1 uit je aangetroffen bridgebestanden
 en de 0.0.8-update. **Er is geen wijziging aan ts_bridge nodig.**
+
+## Nieuw in 1.0.1
+
+- `Timing`, `SpeedLimits` en `Alignment` maken bedieningstijden, snelheidsgrenzen en uitlijning instelbaar, met dezelfde standaardwaarden als voorheen.
+- Configcontrole weigert ontbrekende, ongeldige of tegenstrijdige nieuwe instellingen.
+- Lepelvergrendeling volgt de ingestelde bedieningsduur plus `LiftGrace`.
+- Bridgefuncties blijven centraal in ts_bridge; geometrie, lier en voertuigkoppeling blijven in dit script. Geen bridge-update nodig.
 
 ## Nieuw in 1.0.0
 
@@ -26,7 +33,15 @@ en de 0.0.8-update. **Er is geen wijziging aan ts_bridge nodig.**
 ### Bijwerken
 
 Stop `ts_flatbed`, maak een back-up en vervang de bestanden uit dit pakket.
-Behoud je eigen `config.lua` (versie 1.1.0) en `calibration.json`.
+Gebruik de **nieuwe `config.lua` (1.1.1)** en neem je eigen modellen, jobs/rechten,
+profielen en overige aangepaste waarden uit je back-up over. Zet niet de hele oude
+config terug. Behoud je bestaande `calibration.json`.
+
+Alle `Timing`-waarden zijn milliseconden. `SpeedLimits` gebruikt m/s; vermenigvuldig
+met 3,6 voor km/u. `Alignment` gebruikt meters, behalve de hoeken in graden.
+Houd `ServerCargo`, `ServerSide` en `ServerHeading` minstens zo ruim als hun
+clientinstellingen. `OperationTimeout` moet langer zijn dan `OperationReserve`
+plus de langste van `Secure` en `MinimumWinch`.
 Start daarna `ts_flatbed` opnieuw. SQL-wijzigingen zijn niet nodig.
 
 ### Verificatie

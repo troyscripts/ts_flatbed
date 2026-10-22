@@ -1,0 +1,11 @@
+ts_flatbed 1.0.1 / config 1.1.1
+22 oktober 2026
+
+Lua 5.4 syntaxcontrole en alle zes testscripts geslaagd.
+Tests: geometrie, laden/lossen, gelijktijdige bediening, rechten, bridge-updatechecker,
+passagiers, netwerkcontrole-overname, zichtafstand, dollies, instelbare grenzen en
+configvalidatie. FiveM-natives worden nagebootst; geen live GTA-multiplayertest.
+
+Herhalen vanuit de map boven ts_flatbed:
+python ts_flatbed/tests/run_lua.py ts_flatbed/tests/scenarios.lua ts_flatbed/tests/version_and_dollies.lua ts_flatbed/tests/passengers.lua ts_flatbed/tests/stream_distance.lua ts_flatbed/tests/dollies_client.lua ts_flatbed/tests/config_validation.lua
+Vereist Python 3 en liblua5.4.so.0.

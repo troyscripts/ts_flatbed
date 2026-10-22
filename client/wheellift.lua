@@ -64,7 +64,7 @@ local function doAction(name, truck, car)
             SetVehicleOnGroundProperly(car)
             SetEntityVelocity(car,0,0,0)
         end
-        FBBridge.progress({duration=2000,label='Lepel bedienen',position='bottom',canCancel=false,
+        FBBridge.progress({duration=Config.Timing.WheelLift,label='Lepel bedienen',position='bottom',canCancel=false,
             disable={move=true,car=true,combat=true},
             anim=Config.Remote.enabled and {dict=Config.Remote.dict,clip=Config.Remote.clip,flag=49} or nil})
         local messages={deploy='Lepel uitgeklapt. Zet de voorwielen van de tweede auto boven de wielsteunen.',
@@ -246,7 +246,7 @@ CreateThread(function()
         local wanted={}
         if selected then
             sleep=0
-            if IsControlJustPressed(0,177) or GetGameTimer()-selected.at>60000 or not DoesEntityExist(selected.truck) then
+            if IsControlJustPressed(0,177) or GetGameTimer()-selected.at>Config.Timing.Selection or not DoesEntityExist(selected.truck) then
                 selected=nil;lib.hideTextUI()
             end
         end
